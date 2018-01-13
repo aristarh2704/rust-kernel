@@ -1,0 +1,10 @@
+[package]
+name = "console"
+version = "0.1.0"
+authors = ["Ws12"]
+
+[dependencies]
+
+[lib]
+name = "console"
+path = "lib.rs"

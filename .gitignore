@@ -1,0 +1,6 @@
+.vscode
+MyKernel.code-workspace
+*.o
+target
+vmlinux*
+

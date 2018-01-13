@@ -1,0 +1,10 @@
+[package]
+name = "kernel"
+version = "0.1.0"
+authors = ["Ws12"]
+
+[dependencies]
+console={path="console/"}
+
+[lib]
+path="kernel.rs"
