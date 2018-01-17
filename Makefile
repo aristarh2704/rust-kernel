@@ -1,7 +1,9 @@
+RUST_TARGET_PATH:=`cygpath -m -a ./`
+
 all: vmlinux
 vmlinux: entry.o
-	cargo build --release
-	ld -m i386pe -T link.ld -o vmlinux entry.o target/release/deps/libkernel*.rlib target/release/deps/libconsole*.rlib
+	RUST_TARGET_PATH=$(RUST_TARGET_PATH) xargo build --target kernel --release
+	ld -m i386pe --gc-sections -T link.ld -o vmlinux entry.o target/kernel/release/libkernel.a
 
 vmlinux.elf: vmlinux
 	objcopy -O elf32-i386 vmlinux vmlinux.elf
@@ -9,7 +11,12 @@ vmlinux.elf: vmlinux
 entry.o: entry.asm
 	nasm -f win32 entry.asm -o entry.o
 
-test: vmlinux.elf
+check:
+ifeq (`which xargo`,)
+	$(error You must install xargo, run "cargo install xargo")
+endif
+
+test: check vmlinux.elf
 ifeq ($(QEMU),)
 	$(error $$QEMU must be set to qemu dir path)
 else
@@ -20,5 +27,5 @@ clean:
 	rm -f vmlinux *.o
 	cargo clean
 
-.PHONY: all test clean vmlinux
+.PHONY: all test clean vmlinux check
 

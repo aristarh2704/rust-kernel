@@ -5,6 +5,8 @@ authors = ["Ws12"]
 
 [dependencies]
 console={path="console/"}
+rlibc = "1.0"
 
 [lib]
 path="kernel.rs"
+crate-type=["staticlib"]
