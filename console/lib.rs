@@ -1,61 +1,56 @@
 #![no_std]
+use core::fmt;
 
-fn move_up(x:isize){
-    let buffer=0xb8000 as *mut u16;
-    for y in 0..x{
-        unsafe{
-            let p=buffer.offset(y);
-            let p1=*buffer.offset(y+80);
-            *p=p1
-        };
+pub struct Console<'a>{
+    slice:&'a mut[u16],
+    x:isize,
+    y:isize
+}
+impl<'a> Console<'a>{
+    pub fn new(slice:&'a mut [u16])->Console<'a>{
+        Console{slice:slice,x:0,y:0}
     }
-    for y in 0..79{
-        unsafe{
-            *buffer.offset(1920+y)=0x0700;
+    fn move_up(&mut self){
+        for y in 0..1920{
+            self.slice[y]=self.slice[y+80];
+        }
+        for y in 0..79{
+            self.slice[1920+y]=0x0700;
         }
     }
-}
 
-fn next_line(x:&mut isize,y:&mut isize){
-    *x=0;
-    if *y==24{
-        move_up(1920);
-    }else{
-        *y+=1;
+    fn next_line(&mut self){
+        self.x=0;
+        if self.y==24{
+            self.move_up();
+        }else{
+            self.y+=1;
+        }
+    }
+
+    pub fn clean(&mut self){
+        for y in 0..(self.slice.len()){
+            self.slice[y]=0x0700;
+        } 
     }
 }
 
-pub fn print(buffer:&mut[u16],output:&[u8]){
-    static mut X:isize=0;
-    static mut Y:isize=0;
-    for pos in 0..output.len(){
-        unsafe{
+impl<'a> fmt::Write for Console<'a>{
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let output=s.as_bytes();
+        for pos in 0..output.len(){
             if output[pos]==0x0a{
-                next_line(&mut X,&mut Y);
+                self.next_line();
             }else{
                 let byte=output[pos] as u16;
-                buffer[(Y*80+X) as usize]=7*256 +byte;
-                if X==79{
-                    next_line(&mut X,&mut Y);
+                self.slice[(self.y*80+self.x) as usize]=7*256 +byte;
+                if self.x==79{
+                    self.next_line();
                 }else{
-                    X+=1;
+                    self.x+=1;
                 }
             }
         }
+        Ok(())
     }
 }
-
-pub fn clean(buffer:&mut[u16]){
-    for y in 0..(buffer.len()){
-        buffer[y]=0x0700;
-    } 
-}
- pub fn print_number(buffer:&mut[u16],mut x:u16){
-     let mut arr=[0u8;11];
-     for pos in 0..arr.len()-1{
-        arr[9-pos]=(x%10+48) as u8;
-        x=x/10;
-     }
-     arr[10]=0x0a;
-     print(buffer,&arr);
- }

@@ -6,6 +6,7 @@ authors = ["Ws12"]
 [dependencies]
 console={path="console/"}
 rlibc = "1.0"
+multiboot2="0.1.0"
 
 [lib]
 path="kernel.rs"
