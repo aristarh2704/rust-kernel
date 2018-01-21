@@ -11,3 +11,4 @@ multiboot2="0.1.0"
 [lib]
 path="kernel.rs"
 crate-type=["staticlib"]
+
