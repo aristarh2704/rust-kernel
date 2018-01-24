@@ -1,43 +1,28 @@
-RUST_TARGET_PATH:=$(shell cygpath -m -a ./)
-SRC_FILES="Cargo.* console entry.asm kernel.json kernel.rs link.ld Makefile"
-KERNEL_A:=$(shell cygpath -w -a target/kernel/release/libkernel.a)
+ARCH=x86
+O=build
+SRC=$(shell realpath ./)
+KERNEL_A=$(O)/target/$(ARCH)-target/release/libkernel.a
+RUST_TARGET_PATH=$(SRC)/arch/$(ARCH)
 
-all: check vmlinux.elf
+ifeq ($(shell uname -o),Cygwin)
+O:=$(shell cygpath -am $(O))
+SRC:=$(shell cygpath -am $(SRC))
+endif
+all: $(O)/vmlinux.elf
+	echo $(RUST_TARGET_PATH)
+	echo $(O)
 
-vmlinux.elf: entry.o $(KERNEL_A)
-	ld -m i386pe --gc-sections -T link.ld -o vmlinux entry.o target/kernel/release/libkernel.a
+$(O)/vmlinux.elf: $(O)/entry.o $(KERNEL_A)
+	ld -m i386pe --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/vmlinux $(O)/entry.o $(KERNEL_A)
 	objcopy -O elf32-i386 vmlinux vmlinux.elf
 
--include target\kernel\release\libkernel.d
+$(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
+	nasm -f win32 $(SRC)/arch/x86/entry/entry.asm -o $(O)/entry.o
+
+-include $(O)/target/$(ARCH)-target/release/libkernel.d
 $(KERNEL_A):
-	RUST_TARGET_PATH=$(RUST_TARGET_PATH) xargo build --target kernel --release
+	cd $(O)
+	RUST_TARGET_PATH=$(RUST_TARGET_PATH) xargo build --target $(ARCH)-target --release
+	cd $(SRC)		
 
-entry.o: entry.asm
-	nasm -f win32 entry.asm -o entry.o
-
-check:
-ifeq (`which xargo`,)
-	$(error You must install xargo, run "cargo install xargo")
-endif
-
-dist:
-	mkdir -p kernel-src
-	for i in $(SRC_FILES); do \
-		cp -r $$i kernel-src;\
-	done
-	tar -zcf kernel-src.tgz kernel-src
-	rm -r kernel-src
-
-test: vmlinux.elf
-ifeq ($(QEMU),)
-	$(error $$QEMU must be set to qemu dir path)
-else
-	$(QEMU)/qemu-system-i386 -kernel vmlinux.elf
-endif
-
-clean:
-	rm -f vmlinux *.o
-	cargo clean
-
-.PHONY: all test clean check dist
-
+.PHONY: all
