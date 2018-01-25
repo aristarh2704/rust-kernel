@@ -36,4 +36,4 @@ dist:
 	tar -zcvf kernel-src.tgz kernel-src
 	rm -r kernel-src
 
-.PHONY: all
+.PHONY: all $(KERNEL_A)

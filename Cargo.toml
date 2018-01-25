@@ -6,7 +6,6 @@ authors = ["Ws12"]
 [dependencies]
 console={path="arch/x86/console/"}
 rlibc = "1.0"
-multiboot2="0.1.0"
 io={path="arch/x86/io"}
 
 [lib]
