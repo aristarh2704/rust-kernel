@@ -25,7 +25,7 @@ $(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
 $(KERNEL_A):
 	CARGO_TARGET_DIR=$(O) RUST_TARGET_PATH=$(RUST_TARGET_PATH) xargo build --target $(ARCH)-target --release
 
-test: $(O)/vmlinux.elf
+test: all $(O)/vmlinux.elf
 	$(QEMU)/qemu-system-i386 -kernel $(O)/vmlinux.elf
 
 dist:

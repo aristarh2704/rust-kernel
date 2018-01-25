@@ -23,20 +23,20 @@ pub extern "C" fn kmain(x:u32,y:u32) {
     buffer.clean();
     write!(buffer,"{} {}\n",x,y);
     let mut mmap:&mut[u32];
-    let words=(y-4)/4;
+    let words=y/4;
     unsafe{
         mmap=slice::from_raw_parts_mut(x as *mut u32,words as usize);
     };
-    let structs=words/5;
+    let structs=words/6;
     write!(buffer,"Structs: {}\n",structs);
     for i in 0..structs{
         write!(buffer,"Number: {}\n  Base addr: {} {}\n  Length: {} {}\n  Type: {}\n",
         i,
-        mmap[(i*5) as usize],
-        mmap[(i*5+1) as usize],
-        mmap[(i*5+2) as usize],
-        mmap[(i*5+3) as usize],
-        mmap[(i*5+4) as usize]);
+        mmap[(i*6+1) as usize],
+        mmap[(i*6+2) as usize],
+        mmap[(i*6+3) as usize],
+        mmap[(i*6+4) as usize],
+        mmap[(i*6+5) as usize]);
     };
 }
 
