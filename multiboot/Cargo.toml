@@ -1,0 +1,10 @@
+[package]
+name = "multiboot"
+version = "0.1.0"
+authors = ["Ws12"]
+
+[dependencies]
+
+[lib]
+name = "multiboot"
+path = "lib.rs"

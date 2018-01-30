@@ -7,6 +7,8 @@ authors = ["Ws12"]
 console={path="arch/x86/console/"}
 rlibc = "1.0"
 io={path="arch/x86/io"}
+mem={path="mem"}
+multiboot={path="multiboot/"}
 
 [lib]
 path="kernel/main.rs"
