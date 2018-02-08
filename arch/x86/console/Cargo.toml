@@ -4,6 +4,8 @@ version = "0.1.0"
 authors = ["Ws12"]
 
 [dependencies]
+volatile = "0.1.0"
+spin="0.4.6"
 
 [lib]
 name = "console"
