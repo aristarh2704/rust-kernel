@@ -17,6 +17,7 @@ $(O):
 $(O)/vmlinux.elf: $(O)/entry.o $(KERNEL_A)
 	ld -m i386pe --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/vmlinux $(O)/entry.o $(KERNEL_A)
 	objcopy -O elf32-i386 $(O)/vmlinux $(O)/vmlinux.elf
+	strip $(O)/vmlinux.elf
 
 $(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
 	nasm -f win32 $(SRC)/arch/x86/entry/entry.asm -o $(O)/entry.o

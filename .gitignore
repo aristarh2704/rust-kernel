@@ -3,3 +3,5 @@ MyKernel.code-workspace
 target
 kernel-src*
 build
+Cargo.lock
+
