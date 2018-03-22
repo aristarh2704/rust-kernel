@@ -14,13 +14,16 @@ all: $(O) $(O)/vmlinux.elf
 $(O):
 	mkdir $(O)
 
-$(O)/vmlinux.elf: $(O)/entry.o $(KERNEL_A)
-	ld -m i386pe --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/vmlinux $(O)/entry.o $(KERNEL_A)
+$(O)/vmlinux.elf: $(O)/entry.o $(KERNEL_A) $(O)/end.o
+	ld -m i386pe --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/vmlinux $(O)/entry.o $(KERNEL_A) $(O)/end.o
 	objcopy -O elf32-i386 $(O)/vmlinux $(O)/vmlinux.elf
 	strip $(O)/vmlinux.elf
 
 $(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
 	nasm -f win32 $(SRC)/arch/x86/entry/entry.asm -o $(O)/entry.o
+
+$(O)/end.o: $(SRC)/arch/x86/entry/end.asm
+	nasm -f win32 $(SRC)/arch/x86/entry/end.asm -o $(O)/end.o
 
 -include $(O)/$(ARCH)-target/release/libkernel.d
 $(KERNEL_A):

@@ -1,42 +1,43 @@
 #![no_std]
 #![feature(lang_items)]
-
+#[macro_use]
 extern crate console;
 extern crate rlibc;
 extern crate multiboot;
-
+extern crate list;
+use list::*;
 use core::fmt::Write;
 use multiboot::*;
-use console::writer;
-
+use console::WRITER;
 #[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
 #[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {
-    console::WRITER.lock().write_str("PANIC!!!");
+    print!("PANIC!!!");
     loop{}
 }
-
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => (WRITER.lock().write_fmt(format_args!($($arg)*)))
-}
-#[macro_export]
-macro_rules! println {
-    () => (print!("\n"));
-    ($fmt:expr) => (print!(concat!($fmt, "\n")));
-    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
-}
-
+#[no_mangle] pub extern "C" fn _Unwind_Resume() {} //TODO
 #[no_mangle]
-pub extern "C" fn kmain(multiboot_addr: *const MultiBoot) {
-    writer().clear();
+pub extern "C" fn kmain(multiboot_addr: *const MultiBoot,cs: u32,ce:u32,bs:u32,be:u32) {
+    WRITER.lock().clear();
     println!("Hello world");
     let mb_info=unsafe{
         &*multiboot_addr
     };
-    print!("My loader is: ");
-    println!("{}",unsafe{to_str(mb_info.loader)});
+    println!("Multiboot info is at address 0x{:X}",multiboot_addr as u32);
+    println!("Flags: {:b}",mb_info.flags);
+    println!("Code start: 0x{:X}\nCode size: 0x{:X}\nBSS start: 0x{:X}\nBSS size: 0x{:X}",cs,ce-cs,bs,be-bs);
+    println!("Kernel can use this areas:");
+    let mut mem=0;
+    if let Some(mmap)=mb_info.mmap(){
+        for i in 0..mmap.len(){
+            if mmap[i].flag==1{
+                println!("0x{:8X} - 0x{:8X}",mmap[i].addr,mmap[i].addr+mmap[i].length);
+                mem+=mmap[i].length;
+            }
+        }
+    }
+    println!("Free memory: 0x{:X}",mem-(be-cs));
+    
 }
-
 unsafe fn to_str(addr:*const u8)->&'static str{
     let mut index=0isize;
     loop{

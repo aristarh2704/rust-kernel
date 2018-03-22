@@ -13,15 +13,19 @@ start:
  
 
 extern _kmain         ;kmain определена во внешнем файле
- 
+extern code_end
 
   cli ;блокировка прерываний
   mov esp, end ;указатель стека
-  mov eax, ebx
-  push eax
+  push end
+  push bss_start
+  push code_end
+  push start
+  push ebx
   call _kmain
   hlt ;остановка процессора
 
 section .bss
+bss_start:
 resb 8192 ;8KB на стек
 end:
