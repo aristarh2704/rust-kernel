@@ -1,13 +1,10 @@
 #![no_std]
 #![feature(const_fn)]
 #![feature(unique)]
-
 extern crate spin;
-
 use core::fmt;
 use core::ptr::Unique;
 use spin::Mutex;
-
 #[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
@@ -28,37 +25,30 @@ pub enum Color {
     Yellow     = 14,
     White      = 15,
 }
-
 #[derive(Clone, Copy)]
 pub struct ColorCode(u8);
-
 impl ColorCode {
     const fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
-
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct ScreenChar {
     ascii_character: u8,
     color_code: ColorCode,
 }
-
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
-
 struct Buffer {
     chars: [[ScreenChar; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
-
 pub struct Writer {
     col: usize,
     row: usize,
     pub color_code: ColorCode,
     buffer: Unique<Buffer>,
 }
-
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
         match byte {
@@ -69,7 +59,6 @@ impl Writer {
             byte => {
                 let row = self.row;
                 let col = self.col;
-
                 self.buffer().chars[row][col] = ScreenChar {
                     ascii_character: byte,
                     color_code: self.color_code,
@@ -85,11 +74,9 @@ impl Writer {
             self.up();
         }
     }
-
     fn buffer(&mut self) -> &mut Buffer {
         unsafe{ self.buffer.as_mut() }
     }
-
     fn up(&mut self) {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
@@ -120,7 +107,6 @@ impl Writer {
         }
     }
 }
-
 impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
@@ -129,10 +115,20 @@ impl fmt::Write for Writer {
         Ok(())
     }
 }
-
 pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
     col: 0,
     row: 0,
-    color_code: ColorCode::new(Color::Red, Color::Black),
+    color_code: ColorCode::new(Color::LightCyan, Color::Black),
     buffer: unsafe { Unique::new_unchecked(0xb8000 as *mut _) },
 });
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ({use core::fmt::Write;
+    ::console::WRITER.lock().write_fmt(format_args!($($arg)*))})
+}
+#[macro_export]
+macro_rules! println {
+    () => (print!("\n"));
+    ($fmt:expr) => (print!(concat!($fmt, "\n")));
+    ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
+}
