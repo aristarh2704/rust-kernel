@@ -22,21 +22,20 @@ pub extern "C" fn kmain(multiboot_addr: *const MultiBoot,cs: u32,ce:u32,bs:u32,b
     let mb_info=unsafe{
         &*multiboot_addr
     };
-    println!("Multiboot info is at address 0x{:X}",multiboot_addr as u32);
+    println!("Multiboot info is at address 0x{:08X}",multiboot_addr as u32);
     println!("Flags: {:b}",mb_info.flags);
-    println!("Code start: 0x{:X}\nCode size: 0x{:X}\nBSS start: 0x{:X}\nBSS size: 0x{:X}",cs,ce-cs,bs,be-bs);
+    println!("Kernel use this area: 0x{:08X} - 0x{:08X}",cs,be);
     println!("Kernel can use this areas:");
     let mut mem=0;
     if let Some(mmap)=mb_info.mmap(){
         for i in 0..mmap.len(){
             if mmap[i].flag==1{
-                println!("0x{:8X} - 0x{:8X}",mmap[i].addr,mmap[i].addr+mmap[i].length);
+                println!("0x{:08X} - 0x{:08X}",mmap[i].addr,mmap[i].addr+mmap[i].length);
                 mem+=mmap[i].length;
             }
         }
     }
     println!("Free memory: 0x{:X}",mem-(be-cs));
-    
 }
 unsafe fn to_str(addr:*const u8)->&'static str{
     let mut index=0isize;

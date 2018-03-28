@@ -1,0 +1,11 @@
+[package]
+name = "list"
+version = "0.1.0"
+authors = ["Ws12"]
+
+[dependencies]
+spin="0.4.6"
+console={path="../arch/x86/console/"}
+[lib]
+name = "list"
+path = "lib.rs"
