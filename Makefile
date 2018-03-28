@@ -9,7 +9,7 @@ ifeq ($(shell uname -o),Cygwin)
 O:=$(shell cygpath -am $(O))
 SRC:=$(shell cygpath -am $(SRC))
 endif
-all: $(O) $(O)/vmlinux.elf
+all: $(O) $(O)/kernel.elf
 
 $(O):
 	mkdir $(O)
