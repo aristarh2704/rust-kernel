@@ -33,4 +33,27 @@ pub extern "C" fn kmain(loader_info: &LoaderInfo,cs: u32,ce:u32,bs:u32,be:u32) {
         }
     }
     println!("Free memory: 0x{:X}",mem-(be-cs));
+    unsafe{
+        let mut first=0;
+        let mut founded;
+        let search="RSD PTR ".as_bytes();
+        for index in 0xe0000..0xfffff{
+            let ch=*(index as *const u8);
+            if search[first]==ch{
+                first+=1;
+                if first==search.len(){
+                    founded=index-7;
+                    print!("RSDP founded on 0x{:08X}. OEMID: ",founded);
+                    for i in founded+9..founded+15{
+                        let ch=*(i as *const u8);
+                        print!("{}",ch as char);
+                    }
+                    println!("");
+                    first=0;
+                }
+            }else{
+                first=0;
+            }
+        }
+    }
 }
