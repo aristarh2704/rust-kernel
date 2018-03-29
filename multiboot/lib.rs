@@ -1,60 +1,55 @@
 #![no_std]
+#![feature(const_fn)]
 extern crate spin;
 // Description of Multiboot information structure is in 
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
-#[repr(packed)]
+mod boot;
+pub use boot::MultiBoot as LoaderInfo;
+
 pub struct MultiBoot{
     pub flags:  u32,
-    mem:    LUMem,
-    boot:   &'static BootDevice,
-    pub cmdline: *const u8,
-    pub mods:   Modules,
-    syms:   SymbolTable,
-    pub mmap:   Mmap,
-    drives: Drives,
-    config: &'static BIOSConfigTable,
-    pub loader: *const u8,
-    apm:    &'static APMTable,
-    vbe:    VBE,
-    //fb:     Option<FrameBuffer>,
+    pub mem:    Option<LUMem>,
+    pub boot:   Option<BootDevice>,
+    pub cmdline:Option<&'static str>,
+    pub mods:   Option<Modules>,
+    pub syms:   Option<SymbolTable>,
+    pub mmap:   Option<&'static [boot::Frame]>,
+    pub drives: Option<&'static Drive<u8>>,
+    //pub config: &'static BIOSConfigTable,
+    pub loader: Option<&'static str>,
+    //pub apm:    &'static APMTable,
+    //pub vbe:    VBE,
+    pub fb:     Option<FrameBuffer>,
 }
-#[repr(packed)]
+
 pub struct LUMem{
     pub lower: u32,
     pub upper: u32,
 }
-#[repr(packed)]
+
 pub struct BootDevice{
-    pub part3: u8,
-    pub part2: u8,
-    pub part1: u8,
-    pub drive: u8,
+    pub parts: [u8;4]
 }
-#[repr(packed)]
+
 pub struct Modules{
     pub count: u32,
     pub addr:  u32,
     // TODO: заглушка
 }
-#[repr(packed)]
+
 pub struct SymbolTable{
     pub num: [u32;4]
 }
-#[repr(packed)]
-pub struct Mmap{
-    pub length: u32,
-    pub addr:   u32, //Указатель на массив Frame
-}
-#[repr(packed)]
+
 pub struct Frame{
     pub size:   u32,
     pub addr:   u32,
-    _x:          u32,
+    _addr_high: u32,
     pub length: u32,
-    _y:          u32,
+    _len_high:  u32,
     pub flag:   u32,
 }
-#[repr(packed)]
+
 pub struct Drives{
     pub length: u32,
     pub addr:   u32, //Указатель на массив Drive
@@ -67,11 +62,12 @@ pub struct Drive<T>{
     pub sectors:   u8,
     pub ports:     T,
 }
-#[repr(packed)]
+
+/*
 pub struct BIOSConfigTable{
 //TODO
 }
-#[repr(packed)]
+
 pub struct APMTable{
     pub version:         u16,
     pub code_seg:        u16,
@@ -83,7 +79,7 @@ pub struct APMTable{
     pub code_seg_16_len: u16,
     pub data_seg_len:    u16,
 }
-#[repr(packed)]
+
 pub struct VBE{ 
     pub ctrl_info:     u32, // Формально, это 2 указателя на какие-то структуры. Пока не будем трогать
     pub mode_info:     u32,
@@ -92,16 +88,103 @@ pub struct VBE{
     pub interface_off: u16,
     pub interface_len: u16,
 }
+*/
 pub struct FrameBuffer{
-//TODO
+    addr: u32
+    // TODO
 }
+
+
 impl MultiBoot{
-    pub fn mmap(&self)->Option<&'static [Frame]>{
+    pub const fn new()->MultiBoot{
+        MultiBoot{
+            flags: 0,
+            mem: None,
+            boot: None,
+            cmdline: None,
+            mods: None,
+            syms: None,
+            mmap: None,
+            drives: None,
+            loader: None,
+            fb: None
+        }
+    }
+    pub fn init(&mut self,loader_info: &LoaderInfo){
         unsafe{
-            Some(core::slice::from_raw_parts(
-                self.mmap.addr as *const Frame,
-                (self.mmap.length as usize)/core::mem::size_of::<Frame>()
-        ))}
+            self.flags=loader_info.flags();
+            if self.flag(0){
+                let temp=&loader_info.mem;
+                self.mem=Some(LUMem{
+                    lower: temp.lower,
+                    upper: temp.upper
+                });
+            }
+            if self.flag(1){
+                self.boot=Some(BootDevice{
+                    parts: loader_info.boot.parts
+                });
+            }
+            if self.flag(2){
+                let temp=to_str(loader_info.cmdline);
+                self.cmdline=Some(temp);
+                // TODO: deallocate
+            }
+            if self.flag(3){
+                let temp=Modules{
+                    count: loader_info.mods.count,
+                    addr: loader_info.mods.addr
+                };
+                // TODO: deallocate
+                self.mods=Some(temp);
+            }
+            if self.flag(4) || self.flag(5){
+                self.syms=Some(SymbolTable{
+                    num: loader_info.syms.num
+                });
+                // TODO: deallocate
+            }
+            if self.flag(6){
+                let temp=&loader_info.mmap;
+                self.mmap=Some(core::slice::from_raw_parts(temp.addr,temp.length/core::mem::size_of::<Frame>()));
+                // TODO: deallocate
+            }
+            if self.flag(7){
+                // TODO: how present info about drives?
+            }
+            if self.flag(8){
+                // TODO
+            }
+            if self.flag(9){
+                let temp=to_str(loader_info.loader);
+                self.loader=Some(temp);
+                // TODO: deallocate
+            }
+            if self.flag(10){
+                // TODO
+            }
+            if self.flag(11){
+                // TODO
+            }
+            if self.flag(12){
+                // TODO
+            }
+        }
+    }
+    pub fn flag(&self,flag: u8)->bool{
+        self.flags &(1<<flag) !=0
     }
 }
-pub static mut MULTIBOOT:*const MultiBoot=0 as *const MultiBoot;
+
+unsafe fn to_str(addr:*const u8)->&'static str{
+    let mut index=0isize;
+    loop{
+        let byte=*addr.offset(index);
+        if byte==0{
+            break;
+        }
+        index+=1;
+    }
+    let slice=core::slice::from_raw_parts(addr,index as usize);
+    core::str::from_utf8(slice).unwrap() // TODO
+}
