@@ -5,13 +5,15 @@ extern crate console;
 extern crate rlibc;
 extern crate multiboot;
 extern crate list;
-use list::*;
+extern crate mem;
+use mem::HEAP;
 use core::fmt::Write;
+use core::fmt;
 use multiboot::*;
 use console::WRITER;
 #[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
-#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt() -> ! {
-    print!("PANIC!!!");
+#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
+    println!("PANIC on {} line {} col {}",file,line,col);
     loop{}
 }
 #[no_mangle] pub extern "C" fn _Unwind_Resume() {} //TODO
@@ -31,6 +33,7 @@ pub extern "C" fn kmain(loader_info: &LoaderInfo,cs: u32,ce:u32,bs:u32,be:u32) {
                 mem+=mmap[i].length;
             }
         }
+        unsafe{HEAP.lock().add_region((mmap[1].addr+be) as usize,(mmap[1].addr+mmap[1].length-be)as usize);}
     }
     println!("Free memory: 0x{:X}",mem-(be-cs));
     unsafe{
