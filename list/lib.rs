@@ -1,8 +1,6 @@
 #![no_std]
 #![feature(const_fn)]
-#[macro_use]
-extern crate console;
-#[repr(packed)]
+
 pub struct List<'a,T:'a>{
     pub element: T,
     pub next: Option<&'a mut List<'a,T>>
