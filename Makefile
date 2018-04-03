@@ -1,3 +1,6 @@
+ifeq ($(shell which xargo),)
+$(shell cargo install xargo)
+endif
 ARCH=x86
 O=build
 SRC=./
