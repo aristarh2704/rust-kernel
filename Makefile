@@ -1,6 +1,6 @@
 ARCH=x86
 O=build
-SRC=$(shell realpath ./)
+SRC=./
 SRC_FILES="arch Cargo.* kernel mem multiboot Makefile"
 KERNEL_A=$(O)/$(ARCH)-target/release/libkernel.a
 RUST_TARGET_PATH=$(SRC)/arch/$(ARCH)
