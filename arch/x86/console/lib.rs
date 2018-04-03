@@ -124,7 +124,7 @@ pub static WRITER: Mutex<Writer> = Mutex::new(Writer {
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ({use core::fmt::Write;
-    ::console::WRITER.lock().write_fmt(format_args!($($arg)*))})
+    let _=::console::WRITER.lock().write_fmt(format_args!($($arg)*));})
 }
 #[macro_export]
 macro_rules! println {
