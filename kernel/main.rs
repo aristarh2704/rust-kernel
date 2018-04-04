@@ -4,7 +4,6 @@
 extern crate console;
 extern crate rlibc;
 extern crate multiboot;
-extern crate list;
 extern crate mem;
 use mem::HEAP;
 use core::fmt::Write;
