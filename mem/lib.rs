@@ -45,7 +45,10 @@ impl Heap{
                 start=*area as usize;
                 end = (**area).size+start;
             }
-            let rstart=align_fn(start,align);
+            let mut rstart=align_fn(start,align);
+            if rstart!=start{
+                rstart=align_fn(start+MIN_SIZE,align);
+            }
             if rstart+size>end{
                 unsafe{
                     area= if ((**area).next as usize)==0 {
