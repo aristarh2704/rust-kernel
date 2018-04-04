@@ -4,7 +4,7 @@ endif
 ARCH=x86
 O=build
 SRC=./
-SRC_FILES="arch Cargo.* kernel mem multiboot Makefile"
+SRC_FILES="arch Cargo.* kernel mem multiboot devices Makefile"
 KERNEL_A=$(O)/$(ARCH)-target/release/libkernel.a
 RUST_TARGET_PATH=$(SRC)/arch/$(ARCH)
 
@@ -37,7 +37,7 @@ test: $(O)/iso $(O)/kernel.elf
 	genisoimage.exe -b boot/isolinux/isolinux.bin -no-emul-boot -boot-info -o $(O)/system.iso $(O)/iso
 	$(QEMU)/qemu-system-i386 -cdrom $(O)/system.iso
 
-$(O)/iso: $(O)
+$(O)/iso:
 	cp -r $(SRC)/iso $(O)
 
 dist:

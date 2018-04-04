@@ -1,7 +1,6 @@
 {
     "llvm-target": "i386-pc-windows-gnu",
     "target-endian": "little",
-    "data-layout":"",
     "target-pointer-width": "32",
     "target-c-int-width": "32",
     "arch": "x86",
