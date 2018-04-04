@@ -9,6 +9,7 @@ rlibc = "1.0"
 io={path="arch/x86/io"}
 mem={path="mem"}
 multiboot={path="multiboot/"}
+devices={path="devices"}
 
 [lib]
 path="kernel/main.rs"

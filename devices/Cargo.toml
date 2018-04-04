@@ -1,0 +1,11 @@
+[package]
+name = "devices"
+version = "0.1.0"
+authors = ["Ws12"]
+
+[dependencies]
+io={path="../arch/x86/io"}
+
+[lib]
+name="devices"
+path="lib.rs"

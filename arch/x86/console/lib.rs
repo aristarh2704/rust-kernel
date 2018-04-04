@@ -2,6 +2,8 @@
 #![feature(const_fn)]
 #![feature(unique)]
 extern crate spin;
+extern crate devices;
+use devices::SerialPort;
 use core::fmt;
 use core::ptr::Unique;
 use spin::Mutex;
@@ -51,6 +53,7 @@ pub struct Writer {
 }
 impl Writer {
     pub fn write_byte(&mut self, byte: u8) {
+        SerialPort::out_byte(byte);
         match byte {
             b'\n' => {
                 self.row+=1;

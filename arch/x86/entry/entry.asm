@@ -34,6 +34,12 @@ extern code_end
   call _kmain
   hlt ;остановка процессора
 
+global _out_fn
+_out_fn:
+  mov edx,[esp+4] ;данные
+  mov eax,[esp+8] ;номер порта
+  out dx,al
+  ret
 section .bss
 bss_start:
 resb 8192 ;8KB на стек

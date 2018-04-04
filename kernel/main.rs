@@ -5,6 +5,8 @@ extern crate console;
 extern crate rlibc;
 extern crate multiboot;
 extern crate mem;
+extern crate devices;
+use devices::SerialPort;
 use mem::HEAP;
 use core::fmt::Write;
 use core::fmt;
@@ -19,6 +21,7 @@ use console::WRITER;
 #[no_mangle]
 pub extern "C" fn kmain(loader_info: &LoaderInfo,cs: u32,ce:u32,bs:u32,be:u32) {
     WRITER.lock().clear();
+    //SerialPort::init();
     let mut mb_info=MultiBoot::new();
     mb_info.init(loader_info);
     println!("Flags: {:013b}",mb_info.flags);
