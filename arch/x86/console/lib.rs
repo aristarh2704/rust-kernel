@@ -47,7 +47,7 @@ macro_rules! debug {
 }
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => (TTYMUTEX.get().write_fmt(format_args!($($arg)*)));
+    ($($arg:tt)*) => (let _=TTYMUTEX.get().write_fmt(format_args!($($arg)*)););
 }
 #[macro_export]
 macro_rules! println {
