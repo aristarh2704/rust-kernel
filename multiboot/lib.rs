@@ -90,8 +90,12 @@ pub struct VBE{
 }
 */
 pub struct FrameBuffer{
-    addr: u32
-    // TODO
+    pub addr: u32,
+    pub width:u32,
+    pub height:u32,
+    pub bpp:u8,
+    pub flag:u8
+    // TODO: should use "pitch" field?
 }
 
 
@@ -167,12 +171,25 @@ impl MultiBoot{
                 // TODO
             }
             if self.flag(12){
-                // TODO
+                self.fb=Some(FrameBuffer{
+                    addr: loader_info.fb.addr,
+                    width:loader_info.fb.width,
+                    height:loader_info.fb.height,
+                    bpp:loader_info.fb.bpp,
+                    flag:loader_info.fb.flag
+                });
             }
         }
     }
     pub fn flag(&self,flag: u8)->bool{
         self.flags &(1<<flag) !=0
+    }
+    pub fn get_fb(&self)->&FrameBuffer{
+        if let Some(ref fb)=self.fb{
+            fb
+        }else{
+            panic!();
+        }
     }
 }
 

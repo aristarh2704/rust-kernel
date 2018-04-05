@@ -19,3 +19,11 @@ impl SerialPort{
         }
     }
 }
+impl core::fmt::Write for SerialPort{
+    fn write_str(&mut self,s:&str)->Result<(),core::fmt::Error>{
+        for i in s.as_bytes().iter(){
+            SerialPort::out_byte(*i);
+        }
+        Ok(())
+    }
+}

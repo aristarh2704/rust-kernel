@@ -11,7 +11,8 @@ use mem::HEAP;
 use core::fmt::Write;
 use core::fmt;
 use multiboot::*;
-use console::WRITER;
+use console::*;
+
 #[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
 #[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
     println!("PANIC on {} line {} col {}",file,line,col);
@@ -20,10 +21,11 @@ use console::WRITER;
 #[no_mangle] pub extern "C" fn _Unwind_Resume() {} //TODO
 #[no_mangle]
 pub extern "C" fn kmain(loader_info: &LoaderInfo,cs: u32,ce:u32,bs:u32,be:u32) {
-    WRITER.lock().clear();
-    //SerialPort::init();
     let mut mb_info=MultiBoot::new();
     mb_info.init(loader_info);
+    let mut my_backend=console::Framebuffer::init(&mb_info.get_fb());
+    let mut tty=Tty::init(unsafe{&mut *(&mut my_backend as *mut console::Framebuffer)});
+    TTYMUTEX.set(&mut tty);
     println!("Flags: {:013b}",mb_info.flags);
     println!("Kernel loaded in this area: 0x{:08X} - 0x{:08X}",cs,be);
     println!("Kernel can use this areas:");

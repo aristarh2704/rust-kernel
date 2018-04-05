@@ -89,7 +89,14 @@ pub struct VBE{
     pub interface_off: u16,
     pub interface_len: u16,
 }
+#[repr(packed)]
 pub struct FrameBuffer{
-    pub addr: u32
+    pub addr: u32,
+    pub _addr:u32,
+    pub pitch:u32,
+    pub width:u32,
+    pub height:u32,
+    pub bpp:u8,
+    pub flag:u8
     // TODO
 }
