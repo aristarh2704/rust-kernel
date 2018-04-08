@@ -1,6 +1,8 @@
 #![no_std]
 #![feature(const_fn)]
 extern crate spin;
+#[macro_use]
+extern crate devices;
 // Description of Multiboot information structure is in 
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
 mod boot;
@@ -178,6 +180,14 @@ impl MultiBoot{
                     bpp:loader_info.fb.bpp,
                     flag:loader_info.fb.flag
                 });
+            }else{
+                self.fb=Some(FrameBuffer{
+                    addr: 0xb8000,
+                    width: 80,
+                    height: 25,
+                    bpp: 0,
+                    flag: 0
+                })
             }
         }
     }
@@ -188,7 +198,8 @@ impl MultiBoot{
         if let Some(ref fb)=self.fb{
             fb
         }else{
-            panic!();
+            debug!("PANIC");
+            loop{}
         }
     }
 }

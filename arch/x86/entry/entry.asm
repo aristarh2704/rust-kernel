@@ -18,7 +18,7 @@ start:
         dd 1
         dd 80
         dd 25
-        dd 0
+        dd 24
  
 
 extern _kmain         ;kmain определена во внешнем файле

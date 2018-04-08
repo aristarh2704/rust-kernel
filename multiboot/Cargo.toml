@@ -5,6 +5,7 @@ authors = ["Ws12"]
 
 [dependencies]
 spin="0.4.6"
+devices={path="../devices"}
 
 [lib]
 name = "multiboot"

@@ -1,13 +1,14 @@
 #![no_std]
+#![feature(unsize)]
+#![feature(coerce_unsized)]
 extern crate spin;
+#[macro_use]
+extern crate devices;
 use spin::Mutex;
+
 pub struct Heap{
     area: *mut Area,
 }
-pub struct Owned<T:'static>{
-    pointer: *mut T
-}
-
 struct Area{
     size: usize,
     next: *mut Area
@@ -15,7 +16,6 @@ struct Area{
 // All raw pointers to unknown type are interpreted as *const u32 or &u32
 const MIN_SIZE:usize=core::mem::size_of::<Area>();
 const MIN_ALIGN:usize=core::mem::align_of::<Area>(); // I think, MIN_SIZE > MIN_ALIGN. But if MIN_SIZE<MIN_ALIGN?
-
 impl Heap{
     fn dealloc(&mut self,pointer: *mut Area,mut size: usize){
         size=align_fn(size,MIN_ALIGN);
@@ -84,15 +84,69 @@ impl Heap{
 unsafe impl core::marker::Send for Heap{}
 pub static HEAP: Mutex<Heap>=Mutex::new(Heap{area:0 as *mut Area});
 
-fn align_fn(size: usize,align: usize)->usize{
-    (size+align-1)& !(align-1)
+pub struct Owned<T:'static+?Sized>{
+    pointer: &'static mut T
 }
-
-impl<T> Drop for Owned<T>{
+impl<T> Owned<T>{
+    pub fn new(x: T)->Owned<T>{
+        let addr=HEAP.lock().alloc(core::mem::size_of_val(&x),core::mem::align_of_val(&x)) as *mut T;
+        if addr as u32==0{panic!();}
+        unsafe{
+            core::ptr::copy(&x,addr,1);core::mem::forget(x);
+            Owned{
+                pointer: &mut *addr
+            }
+        }
+    }
+}
+impl<T:Copy+?Sized> Owned<T>{
+    pub fn new_copy(x: &T)->Owned<T>{
+        let addr=HEAP.lock().alloc(core::mem::size_of_val(&x),core::mem::align_of_val(&x)) as *mut T;
+        if addr as u32==0{panic!();}
+        unsafe{
+            *addr=*x;
+            Owned{
+                pointer: &mut *addr
+            }
+        }
+    }
+}
+impl<T:Default> Owned<[T]>{
+    pub fn new_array(count:usize)->Owned<[T]>{
+        let addr=HEAP.lock().alloc(core::mem::size_of::<T>()*count,core::mem::align_of::<T>()) as *mut T;
+        if addr as u32==0{panic!();}
+        unsafe{
+            let pointer=core::slice::from_raw_parts_mut(addr as *mut T,count);
+            for i in 0..pointer.len(){
+                pointer[i]=Default::default();
+            }
+            Owned{
+                pointer:pointer
+            }
+        }
+    }
+}
+impl<T:?Sized> Drop for Owned<T>{
     fn drop(&mut self){
         unsafe{
             core::ptr::drop_in_place(self.pointer);
-            HEAP.lock().dealloc(self.pointer as *mut Area,core::mem::size_of::<T>());
+            HEAP.lock().dealloc(self.pointer as *mut T as *mut Area,core::mem::size_of_val(self.pointer)); // May be size of val eq 0? TODO
         }
     }
+}
+impl<T: ?Sized + core::marker::Unsize<U>, U: ?Sized> core::ops::CoerceUnsized<Owned<U>> for Owned<T> {}
+impl<T:?Sized> core::ops::Deref for Owned<T>{
+    type Target=T;
+    fn deref(&self)->&Self::Target{
+        self.pointer
+    }
+}
+impl<T:?Sized> core::ops::DerefMut for Owned<T>{
+    fn deref_mut(&mut self)->&mut Self::Target{
+        self.pointer
+    }
+}
+
+fn align_fn(size: usize,align: usize)->usize{
+    (size+align-1)& !(align-1)
 }

@@ -27,3 +27,8 @@ impl core::fmt::Write for SerialPort{
         Ok(())
     }
 }
+
+#[macro_export]
+macro_rules! debug {
+    ($($arg:tt)*) => ({use core::fmt::Write;devices::SerialPort{}.write_fmt(format_args!($($arg)*));});
+}
