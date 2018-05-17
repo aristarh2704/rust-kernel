@@ -194,7 +194,7 @@ impl MultiBoot{
     pub fn flag(&self,flag: u8)->bool{
         self.flags &(1<<flag) !=0
     }
-    pub fn get_fb(&self)->&FrameBuffer{
+    pub fn get_fb(&self)->&FrameBuffer{ // TODO: delete this
         if let Some(ref fb)=self.fb{
             fb
         }else{
