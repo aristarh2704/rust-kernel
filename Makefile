@@ -5,6 +5,7 @@ ARCH=x86
 O:=$(shell realpath build)
 SRC=.
 SRC_FILES="arch bios Cargo.toml devices iso kernel Makefile mem multiboot"
+ISO_SRC_FILES=$(shell find $(SRC)/iso)
 KERNEL_A=$(O)/$(ARCH)-target/release/libkernel.a
 RUST_TARGET_PATH=$(SRC)/arch/$(ARCH)
 ifeq ($(shell uname -o),Cygwin)
@@ -36,10 +37,12 @@ test: $(O)/test.iso
 	#cp $(O)/test.iso /sdcard/
 test-pc: $(O)/test.iso
 	$(QEMU)/qemu-system-i386 -cdrom $(O)/test.iso
-$(O)/test.iso: $(O)/kernel.elf
-	cp $(O)/kernel.elf iso/boot
-	genisoimage -U -b boot/grub/i386-pc/eltorito.img -no-emul-boot -boot-info-table -eltorito-alt-boot -b boot/grub/efi.img -no-emul-boot -o $(O)/test.iso iso
-
+$(O)/test.iso: $(O)/kernel.elf $(O)/iso
+	cp $(O)/kernel.elf $(O)/iso/boot
+	genisoimage -U -b boot/grub/i386-pc/eltorito.img -no-emul-boot -boot-info-table -eltorito-alt-boot -b boot/grub/efi.img -no-emul-boot -o $(O)/test.iso $(O)/iso
+$(O)/iso: $(ISO_SRC_FILES)
+	cp -r iso $(O)
+	touch $(O)/iso
 dist:
 	mkdir -p kernel-src
 	for i in $(SRC_FILES); do			\
