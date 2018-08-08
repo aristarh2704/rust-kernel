@@ -2,12 +2,11 @@ ifeq ($(shell which xargo),)
 $(shell cargo install xargo)
 endif
 ARCH=x86
-O=$(shell realpath build)
+O:=$(shell realpath build)
 SRC=.
 SRC_FILES="arch bios Cargo.toml devices iso kernel Makefile mem multiboot"
 KERNEL_A=$(O)/$(ARCH)-target/release/libkernel.a
 RUST_TARGET_PATH=$(SRC)/arch/$(ARCH)
-
 ifeq ($(shell uname -o),Cygwin)
 #O:=$(shell cygpath -am $(O))
 #SRC:=$(shell cygpath -am $(SRC))
