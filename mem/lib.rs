@@ -4,8 +4,22 @@
 extern crate spin;
 #[macro_use]
 extern crate devices;
+extern crate multiboot;
 use spin::Mutex;
-
+pub fn init(mb_mmap:&Option<&'static [multiboot::Frame]>,cs:u32,be:u32){
+    if let Some(mmap)=mb_mmap{
+        for i in 0..mmap.len(){
+            if mmap[i].flag==1{
+                let mut reg_start=mmap[i].addr;
+                let mut reg_end=mmap[i].addr+mmap[i].length;
+                if reg_start==cs{
+                    reg_start=be;
+                }
+                unsafe{HEAP.lock().add_region(reg_start as usize,(reg_end-reg_start) as usize)};
+            }
+        }
+    }
+}
 pub struct Heap{
     area: *mut Area,
 }
@@ -30,7 +44,7 @@ impl Heap{
             return 0 as *mut u32
         }
         let mut area: *mut*mut Area = if (self.area as usize)==0 {
-            return 0 as *mut u32
+            panic!("Heap not inited!");
         }else{
             &mut self.area
         };
@@ -146,7 +160,7 @@ impl<T:?Sized> core::ops::DerefMut for Owned<T>{
         self.pointer
     }
 }
-
+unsafe impl<T:?Sized> core::marker::Send for Owned<T>{}
 fn align_fn(size: usize,align: usize)->usize{
     (size+align-1)& !(align-1)
 }

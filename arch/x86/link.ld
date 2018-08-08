@@ -1,9 +1,9 @@
-OUTPUT_FORMAT(pei-i386)
 ENTRY(start)
 SECTIONS
  {
    . = 0x100000;
-   .text : { *(.text) }
+   //.boot : { *(.boot) }
+   .text : { *(.text)   }
    .data : { *(.data) }
    .bss  : { *(.bss)  }
  }

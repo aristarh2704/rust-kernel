@@ -1,73 +1,97 @@
 #![no_std]
 #![feature(lang_items)]
+#![feature(panic_implementation)]
 #[macro_use]
 extern crate console;
 extern crate rlibc;
 extern crate multiboot;
 extern crate mem;
-#[macro_use]
+#[macro_use] // debug macros
 extern crate devices;
-use devices::SerialPort;
-use mem::{HEAP,Owned};
+use mem::HEAP;
 use core::fmt::Write;
 use core::fmt;
-use multiboot::{MultiBoot,LoaderInfo};
+use multiboot::MultiBoot;
 use console::*;
 
-#[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {}
-#[lang = "panic_fmt"] #[no_mangle] pub extern fn panic_fmt(fmt: fmt::Arguments, file: &'static str, line: u32, col: u32) -> ! {
-    println!("PANIC on {} line {} col {}",file,line,col);
-    loop{}
-}
-#[no_mangle] pub extern "C" fn _Unwind_Resume() {} //TODO
+#[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {debug!("eh_personality");loop{}}
+#[panic_implementation] #[no_mangle] pub fn panicimpl(x:&core::panic::PanicInfo)->!{debug!("Panic {}",x);loop{}}
+#[no_mangle] pub extern "C" fn _Unwind_Resume(){debug!("Unwind_Resume");loop{}} //TODO
 #[no_mangle]
-pub extern "C" fn kmain(loader_info: &LoaderInfo,cs: u32,ce:u32,bs:u32,be:u32) {
-    let mut mb_info=MultiBoot::new();
-    mb_info.init(loader_info);
-    let mut mem=0;
-    if let Some(mmap)=mb_info.mmap{
-        for i in 0..mmap.len(){
-            if mmap[i].flag==1{
-                let mut reg_start=mmap[i].addr;
-                let mut reg_end=mmap[i].addr+mmap[i].length;
-                if reg_start==cs{
-                    reg_start=be;
-                }
-                unsafe{HEAP.lock().add_region(reg_start as usize,(reg_end-reg_start) as usize)};
-            }
-        }
-    }
-    let mut my_backend=TtyBackend::init(&mb_info.get_fb());
-    let mut tty=Tty::init(my_backend);
-    TTYMUTEX.set(&mut tty);
-    println!("Flags: {:013b}",mb_info.flags);
+pub extern "C" fn kmain(check:u32,loader_info: usize,cs: u32,ce:u32,bs:u32,be:u32) {
+    let mb_info=multiboot::init(loader_info);
+    mem::init(&mb_info.mmap,cs,be);
+    console::init(&mb_info.fb);
     println!("Kernel loaded in this area: 0x{:08X} - 0x{:08X}",cs,be);
-    println!("Free memory: 0x{:X}",mem-(be-cs));
-    let mut x=Searcher{
+    let x=Searcher{
         start: 0xe0000,
         end: 0x7ffffff,
         size: 20,
         x: "RSD PTR "
     };
     for i in x{
-        let mut checksum=0;
-        for k in 0..20{
-            checksum+=i[k];
-        }
-        if checksum==0{
-            let mut addr=0u32;
-            for k in 0..4{
-                addr=(addr<<8)+i[19-k] as u32;
-            }
-            let rsdt=unsafe{&*(addr as *const Rsdt)};
-            for k in 0..4{
-                print!("{}",rsdt.header.signature[k] as char);
+        let rsdp=unsafe{&*(i.as_ptr() as *const RSDP)};
+        if valid(rsdp){
+            let rsdt=rsdp.rsdt;
+            print_str(&rsdt.signature);
+            println!("");
+            let count=(rsdt.length-36)/4;
+            let mut addr=Addr::new(rsdt as *const _ as usize);
+            addr.read::<ACPISDTHeader>();
+            for i in 0..count{
+                let mut en=addr.read::<&mut ACPISDTHeader>();
+                print!(" ");
+                print_str(&en.signature);
+                print!(" 0x{:08X}",*en as *const _ as u32);
+                println!("");
+
+                if i==0{
+                    let mut addr=Addr::new(*en as *const _ as usize);
+                    addr.read::<ACPISDTHeader>();
+                    addr.read::<&ACPISDTHeader>();
+                    let mut dsdt=addr.read::<&ACPISDTHeader>(); //&&DSDT
+                    let ss=dsdt.length-36;
+                    let mut addr=Addr::new(*dsdt as *const _ as usize);
+                    addr.read::<ACPISDTHeader>();
+                    println!("  DSDT size: {}",ss);
+                    for i in 0..ss{
+                        //print!("{}",*addr.read::<u8>() as char);
+                    }
+                    println!();
+                }
+                if i==2{
+                    println!("  SSDT size: {}",en.length-36);
+                }
             }
         }
     }
     print!("Done\n");
     println!("Я думаю, ты слишком ленивый человек, чтобы создать нормальное ядро. Поэтому дальше запускаться не хочу, иди в жопу");
     panic!();
+}
+
+fn print_str(output:&[u8]){
+    for i in 0..output.len(){
+        print!("{}",output[i] as char);
+    }
+}
+
+struct Addr{
+    x: usize
+}
+impl Addr{
+    fn new(x:usize)->Addr{
+        Addr{
+            x:x
+        }
+    }
+    fn read<'a,'b,T>(&'a mut self)->&'b mut T{
+        let addr=unsafe{
+            &mut *(self.x as *mut T)
+        };
+        self.x+=core::mem::size_of::<T>();
+        addr
+    }
 }
 
 struct Searcher{
@@ -105,10 +129,10 @@ struct RSDP{
     checksum: u8,
     oemid: [u8;6],
     revision: u8,
-    rsdt: &'static Rsdt
+    rsdt: &'static ACPISDTHeader
 }
 #[repr(packed)]
-struct Rsdt{
+struct RSDT{
     header: ACPISDTHeader
 }
 #[repr(packed)]
@@ -119,6 +143,16 @@ struct ACPISDTHeader{
     checksum: u8,
     oemid: [u8;6],
     oemtableid: [u8;8],
+    oemrevision: u32,
     creatorid: u32,
     creatorrevision: u32
+}
+
+fn valid<T>(addr: &T)->bool{
+    let addr=unsafe{core::slice::from_raw_parts(addr as *const T as *const u8,core::mem::size_of::<T>())};
+    let mut sum=0u8;
+    for i in 0..addr.len(){
+        sum+=addr[i];
+    }
+    sum==0
 }

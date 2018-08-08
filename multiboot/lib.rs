@@ -5,92 +5,24 @@ extern crate spin;
 extern crate devices;
 // Description of Multiboot information structure is in 
 // https://www.gnu.org/software/grub/manual/multiboot/multiboot.html#Boot-information-format
-mod boot;
-pub use boot::MultiBoot as LoaderInfo;
+//mod boot;
 
 pub struct MultiBoot{
-    pub flags:  u32,
-    pub mem:    Option<LUMem>,
-    pub boot:   Option<BootDevice>,
     pub cmdline:Option<&'static str>,
-    pub mods:   Option<Modules>,
-    pub syms:   Option<SymbolTable>,
-    pub mmap:   Option<&'static [boot::Frame]>,
-    pub drives: Option<&'static Drive<u8>>,
-    //pub config: &'static BIOSConfigTable,
+    pub mmap:   Option<&'static [Frame]>,
     pub loader: Option<&'static str>,
-    //pub apm:    &'static APMTable,
-    //pub vbe:    VBE,
-    pub fb:     Option<FrameBuffer>,
+    pub fb:     FrameBuffer,
 }
-
-pub struct LUMem{
-    pub lower: u32,
-    pub upper: u32,
-}
-
-pub struct BootDevice{
-    pub parts: [u8;4]
-}
-
-pub struct Modules{
-    pub count: u32,
-    pub addr:  u32,
-    // TODO: заглушка
-}
-
-pub struct SymbolTable{
-    pub num: [u32;4]
-}
-
+#[repr(packed)]
 pub struct Frame{
-    pub size:   u32,
     pub addr:   u32,
-    _addr_high: u32,
+    _addr:      u32,
     pub length: u32,
-    _len_high:  u32,
+    _length: u32,
     pub flag:   u32,
+    _reserved:  u32
 }
 
-pub struct Drives{
-    pub length: u32,
-    pub addr:   u32, //Указатель на массив Drive
-}
-pub struct Drive<T>{
-    pub number:    u8,
-    pub mode:      u8,
-    pub cylinders: u16,
-    pub heads:     u8,
-    pub sectors:   u8,
-    pub ports:     T,
-}
-
-/*
-pub struct BIOSConfigTable{
-//TODO
-}
-
-pub struct APMTable{
-    pub version:         u16,
-    pub code_seg:        u16,
-    pub offset:          u32,
-    pub code_seg_16:     u16,
-    pub data_seg:        u16,
-    pub flags:           u16,
-    pub code_seg_len:    u16,
-    pub code_seg_16_len: u16,
-    pub data_seg_len:    u16,
-}
-
-pub struct VBE{ 
-    pub ctrl_info:     u32, // Формально, это 2 указателя на какие-то структуры. Пока не будем трогать
-    pub mode_info:     u32,
-    pub mode:          u16,
-    pub interface_seg: u16,
-    pub interface_off: u16,
-    pub interface_len: u16,
-}
-*/
 pub struct FrameBuffer{
     pub addr: u32,
     pub width:u32,
@@ -100,119 +32,89 @@ pub struct FrameBuffer{
     // TODO: should use "pitch" field?
 }
 
+struct Addr{
+    x: usize,
+    readed:usize
+}
+impl Addr{
+    fn new(x:usize)->Addr{
+        Addr{
+            x:x,
+            readed:0
+        }
+    }
+    fn read<'a,'b,T>(&'a mut self)->&'b mut T{
+        let addr=unsafe{
+            &mut *(self.x as *mut T)
+        };
+        self.x+=core::mem::size_of::<T>();
+        self.readed+=core::mem::size_of::<T>();
+        addr
+    }
+    fn add(&mut self,x:usize){
+        self.x+=x;
+        self.readed+=x;
+    }
+}
 
 impl MultiBoot{
     pub const fn new()->MultiBoot{
         MultiBoot{
-            flags: 0,
-            mem: None,
-            boot: None,
             cmdline: None,
-            mods: None,
-            syms: None,
             mmap: None,
-            drives: None,
             loader: None,
-            fb: None
-        }
-    }
-    pub fn init(&mut self,loader_info: &LoaderInfo){
-        unsafe{
-            self.flags=loader_info.flags();
-            if self.flag(0){
-                let temp=&loader_info.mem;
-                self.mem=Some(LUMem{
-                    lower: temp.lower,
-                    upper: temp.upper
-                });
-            }
-            if self.flag(1){
-                self.boot=Some(BootDevice{
-                    parts: loader_info.boot.parts
-                });
-            }
-            if self.flag(2){
-                let temp=to_str(loader_info.cmdline);
-                self.cmdline=Some(temp);
-                // TODO: deallocate
-            }
-            if self.flag(3){
-                let temp=Modules{
-                    count: loader_info.mods.count,
-                    addr: loader_info.mods.addr
-                };
-                // TODO: deallocate
-                self.mods=Some(temp);
-            }
-            if self.flag(4) || self.flag(5){
-                self.syms=Some(SymbolTable{
-                    num: loader_info.syms.num
-                });
-                // TODO: deallocate
-            }
-            if self.flag(6){
-                let temp=&loader_info.mmap;
-                self.mmap=Some(core::slice::from_raw_parts(temp.addr,temp.length/core::mem::size_of::<Frame>()));
-                // TODO: deallocate
-            }
-            if self.flag(7){
-                // TODO: how present info about drives?
-            }
-            if self.flag(8){
-                // TODO
-            }
-            if self.flag(9){
-                let temp=to_str(loader_info.loader);
-                self.loader=Some(temp);
-                // TODO: deallocate
-            }
-            if self.flag(10){
-                // TODO
-            }
-            if self.flag(11){
-                // TODO
-            }
-            if self.flag(12){
-                self.fb=Some(FrameBuffer{
-                    addr: loader_info.fb.addr,
-                    width:loader_info.fb.width,
-                    height:loader_info.fb.height,
-                    bpp:loader_info.fb.bpp,
-                    flag:loader_info.fb.flag
-                });
-            }else{
-                self.fb=Some(FrameBuffer{
-                    addr: 0xb8000,
-                    width: 80,
-                    height: 25,
-                    bpp: 0,
-                    flag: 0
-                })
+            fb: FrameBuffer{
+                addr: 0xb8000,
+                height: 25,
+                width: 80,
+                bpp: 2,
+                flag:2
             }
         }
     }
-    pub fn flag(&self,flag: u8)->bool{
-        self.flags &(1<<flag) !=0
-    }
-    pub fn get_fb(&self)->&FrameBuffer{
-        if let Some(ref fb)=self.fb{
-            fb
-        }else{
-            debug!("PANIC");
-            loop{}
+    pub fn init(&mut self,loader_info: usize){
+        let mut base=Addr::new(loader_info);
+        let size=*base.read::<usize>();
+        base.read::<u32>();
+        debug!("MBI tags: ");
+        while base.readed<size{
+            let last=base.readed;
+            let flag=*base.read::<u32>();
+            let sub_size=*base.read::<u32>();
+            debug!("{} ",flag);
+            match flag{
+                8=>{
+                    let addr=*base.read::<u32>();
+                    base.read::<u32>();
+                    base.read::<u32>();
+                    let width=*base.read::<u32>();
+                    let height=*base.read::<u32>();
+                    let bpp=*base.read::<u8>();
+                    let flag=*base.read::<u8>();
+                    self.fb=FrameBuffer{
+                        addr:   addr,
+                        width:  width,
+                        height: height,
+                        bpp:    bpp,
+                        flag:   flag
+                    };
+                }
+                6=>{
+                    let addr=base.x+8;
+                    let count=((sub_size-16)/24) as usize;
+                    self.mmap=Some(unsafe{core::slice::from_raw_parts_mut(addr as *mut Frame,count)});
+                }
+                _=>{}
+            }
+            let aligned=((sub_size-1)/8)*8+8;
+            let must_read=(aligned as usize)-(base.readed-last);
+            base.add(must_read);
         }
+        debug!("\n");
     }
 }
-
-unsafe fn to_str(addr:*const u8)->&'static str{
-    let mut index=0isize;
-    loop{
-        let byte=*addr.offset(index);
-        if byte==0{
-            break;
-        }
-        index+=1;
-    }
-    let slice=core::slice::from_raw_parts(addr,index as usize);
-    core::str::from_utf8(slice).unwrap() // TODO
+pub fn init(loader_info:usize)->MultiBoot{
+    let mut mb_info=MultiBoot::new();
+    mb_info.init(loader_info);
+    mb_info
 }

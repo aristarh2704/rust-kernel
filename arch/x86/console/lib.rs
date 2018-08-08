@@ -1,15 +1,15 @@
 #![no_std]
 #![feature(const_fn)]
 
+extern crate spin;
 extern crate multiboot;
-#[macro_use]
 extern crate devices;
 extern crate mem;
 use mem::Owned;
 mod font;
 use font::FontData;
 use multiboot::FrameBuffer as mb_fb;
-
+use spin::Mutex;
 #[allow(dead_code)]
 #[repr(u8)]
 pub enum Color {
@@ -46,7 +46,7 @@ struct ScreenChar {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => (let _=TTYMUTEX.get().write_fmt(format_args!($($arg)*)););
+    ($($arg:tt)*) => (let _=TTYMUTEX.lock().as_mut().expect("No TTY!").write_fmt(format_args!($($arg)*)););
 }
 #[macro_export]
 macro_rules! println {
@@ -54,7 +54,12 @@ macro_rules! println {
     ($fmt:expr) => (print!(concat!($fmt, "\n")));
     ($fmt:expr, $($arg:tt)*) => (print!(concat!($fmt, "\n"), $($arg)*));
 }
-
+pub static TTYMUTEX:Mutex<Option<Tty>>=Mutex::new(None);
+pub fn init(fb:&mb_fb){
+    let backend=TtyBackend::init(fb);
+    let tty=Tty::init(backend);
+    *(TTYMUTEX.lock())=Some(tty);
+}
 pub struct Tty{
     max_row: u32,
     max_col: u32,
@@ -64,12 +69,10 @@ pub struct Tty{
 }
 impl Tty{
     pub fn write_byte(&mut self,byte: char) {
-        debug!("{}",byte as char);
         match byte {
             '\n'=>{
                 self.row+=1;
                 self.col=0;
-                debug!("\r");
             }
             byte=>{
                 self.backend.write_byte(self.row,self.col,byte as u32);
@@ -77,7 +80,6 @@ impl Tty{
                 if self.col==self.max_col{
                     self.row+=1;
                     self.col=0;
-                    debug!("\n\r");
                 }
             }
         }
@@ -116,7 +118,7 @@ impl TtyBackend{
         if fb.flag==1{
             Framebuffer::init(fb)
         }else{
-            Owned::new(Console::init())
+            Owned::new(Console::init(fb))
         }
     }
 }
@@ -124,7 +126,7 @@ impl TtyBackend{
 struct Framebuffer{
     width: u32, // Количество пиксел в строке
     height: u32, // Количество пиксел в столбце
-    bpp: u8, // Количество байт на символ
+    bpp: u8, // Количество байт на пиксел
     font: Font,
     addr: u32 // Пока вот так...
 }
@@ -138,7 +140,7 @@ impl TtyBackend for Framebuffer{
         for i in 0..height{
             let mut bits=symbol[i as usize];
             let mut x=width*col+width-1;
-            for i in 0..width{
+            for _i in 0..width{
                 let off;
                 if bits%2==1{
                     off=0xff;
@@ -157,7 +159,23 @@ impl TtyBackend for Framebuffer{
             y+=1;
         }
     }
-    fn up(&mut self){}
+    fn up(&mut self){
+        let sum=((self.height-self.font.height)*self.width*(self.bpp as u32)) as usize;
+        let offset=(self.font.height*self.width*(self.bpp as u32))as isize;
+        let mut addr=self.addr as *mut u8;
+        for _i in 0..sum{
+            unsafe{
+                *addr=*addr.offset(offset);
+                addr=addr.offset(1);
+            }
+        }
+        for _i in 0..offset{
+            unsafe{
+                *addr=0;
+                addr=addr.offset(1);
+            }
+        }
+    }
     fn get_size(&self)->(u32,u32){
         let rows=self.height/self.font.height;
         let cols=self.width/self.font.width;
@@ -166,18 +184,19 @@ impl TtyBackend for Framebuffer{
 }
 impl Framebuffer{
     pub fn init(fb: &mb_fb)->Owned<Framebuffer>{
+        let font=Font::init();
         Owned::new(Framebuffer{
             width: fb.width,
-            height: fb.height,
+            height: fb.height-(fb.height%font.height),
             bpp: fb.bpp/8,
-            font: Font::init(),
+            font: font,
             addr: fb.addr
         })
     }
 }
 struct Font{
     glyphs: &'static [u8],
-    unicode: Owned<[u32]>,
+    //unicode: Owned<[u32]>,
     height:u32,
     width: u32,
     count: u32,
@@ -187,14 +206,14 @@ impl Font{
     fn init()->Self{
         let font_data=FontData;
         let count=u32_from_u8(&font_data[16..20]);
-        let unicode=Owned::new_array(0); //TODO
+        //let unicode=Owned::new_array(0); //TODO
         //let flag=u32_from_u8(&font_data[12..16]);
         let height=u32_from_u8(&font_data[24..28]);
         let width=u32_from_u8(&font_data[28..32]);
         let glyphs=&font_data[32 as usize..((height*width*count/8)+32) as usize];
         Self{
             glyphs: glyphs,
-            unicode: unicode,
+            //unicode: unicode,
             height: height,
             width: width,
             count: count,
@@ -207,9 +226,12 @@ impl Font{
     }
 }
 
-struct Console{}
+struct Console{
+    height: u32,
+    width: u32
+}
 impl Console{
-    fn init()->Console{
+    fn init(fb: &mb_fb)->Console{
         let addr=0xb8000 as *mut u8;
         let attribute=ColorCode::new(Color::White,Color::Black).0;
         unsafe{
@@ -218,7 +240,10 @@ impl Console{
                 *addr.offset((i*2+1) as isize)=attribute;
             }
         }
-        Console{}
+        Console{
+            height: fb.height,
+            width: fb.width
+        }
     }
 }
 impl TtyBackend for Console{
@@ -230,38 +255,26 @@ impl TtyBackend for Console{
             *((0xb8000 as *mut u8).offset((offset+1) as isize))=attribute;
         }
     }
-    fn up(&mut self){}
+    fn up(&mut self){
+        let mut addr=0xb8000 as *mut u16;
+        for _i in 0..(self.height-1)*self.width{
+            unsafe{
+                *addr=*addr.offset(self.width as isize);
+                addr=addr.offset(1);
+            }
+        }
+        for _i in 0..self.width{
+            unsafe{
+                *addr=ColorCode::new(Color::White,Color::Black).0 as u16;
+                addr=addr.offset(1);
+            }
+        }
+    }
     fn get_size(&self)->(u32,u32){
         (25,80)
     }
 }
 
-unsafe impl core::marker::Sync for TtyMutex{}
-pub struct TtyMutex{
-    tty: *mut Tty
-}
-impl TtyMutex{
-    pub fn get(&self)->&mut Tty{
-        unsafe{
-            &mut *(self.tty)
-        }
-    }
-    const fn new()->Self{
-        TtyMutex{
-            tty: 0 as *mut Tty
-        }
-    }
-    pub fn set(&self,tty:&mut Tty){
-        let sf;
-        let tty_static;
-        unsafe{
-            sf=&mut *(self as *const TtyMutex as *mut TtyMutex);
-            tty_static=tty as *mut Tty;
-        }
-        sf.tty=tty_static;
-    }
-}
-pub static TTYMUTEX:TtyMutex=TtyMutex::new();
 
 fn u32_from_u8(addr: &[u8])->u32{
     if addr.len()>=3{

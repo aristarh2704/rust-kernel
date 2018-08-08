@@ -6,7 +6,7 @@ authors = ["Ws12"]
 [dependencies]
 spin="0.4.6"
 devices={path="../devices"}
-
+multiboot={path="../multiboot"}
 [lib]
 name = "mem"
 path = "lib.rs"
