@@ -18,7 +18,7 @@ use console::*;
 #[panic_implementation] #[no_mangle] pub fn panicimpl(x:&core::panic::PanicInfo)->!{debug!("Panic {}",x);loop{}}
 #[no_mangle] pub extern "C" fn _Unwind_Resume(){debug!("Unwind_Resume");loop{}} //TODO
 #[no_mangle]
-pub extern "C" fn kmain(check:u32,loader_info: usize,cs: u32,ce:u32,bs:u32,be:u32) {
+pub extern "C" fn kmain(loader_info: usize,cs: u32,be:u32) {
     let mb_info=multiboot::init(loader_info);
     mem::init(&mb_info.mmap,cs,be);
     console::init(&mb_info.fb);

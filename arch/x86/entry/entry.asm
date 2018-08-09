@@ -4,7 +4,7 @@
 section .text
 bits 32
 extern _kmain         ;kmain определена во внешнем файле
-extern code_end
+extern kernel_end
 global start
 hd_start:
         ;multiboot spec
@@ -37,38 +37,11 @@ end_tag:dw 0
         dw 0
         dd 8
 header_end:
-VIDEO_MEMORY equ 0xb8000
-WHITE_ON_BLACK equ 0x0f ; the color byte for each character
-
-print_string_pm:
-    pusha
-    mov edx, VIDEO_MEMORY
-
-print_string_pm_loop:
-    mov al, [ebx] ; [ebx] is the address of our character
-    mov ah, WHITE_ON_BLACK
-
-    cmp al, 0 ; check if end of string
-    je print_string_pm_done
-
-    mov [edx], ax ; store character + attribute in video memory
-    add ebx, 1 ; next char
-    add edx, 2 ; next video memory position
-
-    jmp print_string_pm_loop
-
-print_string_pm_done:
-    popa
-    ret
 start:
-  cli ;блокировка прерываний
   mov esp, end ;указатель стека
-  push end
-  push bss_start
-  push code_end
-  push start
+  push kernel_end
+  push hd_start
   push ebx
-  push eax
   call _kmain
   hlt ;остановка процессора
 
@@ -78,15 +51,6 @@ _out_fn:
   mov eax,[esp+8] ;номер порта
   out dx,al
   ret
-global _rust_begin_unwind2
-_rust_begin_unwind2: 
-	cli
-	mov ebx,msg
-	call print_string_pm
-	hlt
-msg: db 'RUST_BEGIN_UNWIND!',0
-hello: db 'HELLO WORLD!',0
 section .bss
-bss_start:
 resb 8192 ;8KB на стек
 end:
