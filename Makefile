@@ -17,16 +17,14 @@ all: $(O) $(O)/kernel.elf
 $(O):
 	mkdir $(O)
 
-$(O)/kernel.elf: $(O)/entry.o $(KERNEL_A) $(O)/end.o
+$(O)/kernel.elf: $(O)/entry.o
 	objcopy -O elf32-i386 $(KERNEL_A)
-	i686-linux-ld --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/kernel.elf $(O)/entry.o $(KERNEL_A) $(O)/end.o
+	i686-linux-ld --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/kernel.elf $(O)/entry.o $(KERNEL_A)
 	strip $(O)/kernel.elf
 
 $(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
 	nasm -f elf32 $(SRC)/arch/x86/entry/entry.asm -o $(O)/entry.o
 
-$(O)/end.o: $(SRC)/arch/x86/entry/end.asm
-	nasm -f elf32 $(SRC)/arch/x86/entry/end.asm -o $(O)/end.o
 
 -include $(O)/$(ARCH)-target/release/libkernel.d
 $(KERNEL_A):
