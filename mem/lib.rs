@@ -66,6 +66,7 @@ impl Heap{
             if rstart+size>end{
                 unsafe{
                     area= if ((**area).next as usize)==0 {
+                        panic!("Unknown error");
                         return 0 as *mut u32
                     }else{
                         &mut (**area).next

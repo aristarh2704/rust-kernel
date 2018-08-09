@@ -12,6 +12,8 @@ pub struct MultiBoot{
     pub mmap:   Option<&'static [Frame]>,
     pub loader: Option<&'static str>,
     pub fb:     FrameBuffer,
+    pub base:   usize,
+    pub size:   usize
 }
 #[repr(packed)]
 pub struct Frame{
@@ -63,6 +65,8 @@ impl MultiBoot{
             cmdline: None,
             mmap: None,
             loader: None,
+            size: 0,
+            base: 0,
             fb: FrameBuffer{
                 addr: 0xb8000,
                 height: 25,
@@ -75,6 +79,8 @@ impl MultiBoot{
     pub fn init(&mut self,loader_info: usize){
         let mut base=Addr::new(loader_info);
         let size=*base.read::<usize>();
+        self.base=loader_info;
+        self.size=size;
         base.read::<u32>();
         debug!("MBI tags: ");
         while base.readed<size{
@@ -104,6 +110,11 @@ impl MultiBoot{
                     let count=((sub_size-16)/24) as usize;
                     self.mmap=Some(unsafe{core::slice::from_raw_parts_mut(addr as *mut Frame,count)});
                 }
+                1=>{
+                    let bytebuf=unsafe{core::slice::from_raw_parts_mut(base.x as *mut u8,(sub_size-9) as usize)};
+                    let cmdline=core::str::from_utf8(bytebuf).unwrap_or("non UTF-8 cmdline");
+                    self.cmdline=Some(cmdline);
+                }
                 _=>{}
             }
             let aligned=((sub_size-1)/8)*8+8;
@@ -113,6 +124,7 @@ impl MultiBoot{
         debug!("\n");
     }
 }
+
 pub fn init(loader_info:usize)->MultiBoot{
     let mut mb_info=MultiBoot::new();
     mb_info.init(loader_info);
