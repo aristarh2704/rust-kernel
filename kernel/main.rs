@@ -13,9 +13,24 @@ use core::fmt::Write;
 use core::fmt;
 use multiboot::MultiBoot;
 use console::*;
-
+extern{
+    static eh_frame: usize;
+}
 #[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {debug!("eh_personality");loop{}}
-#[panic_implementation] #[no_mangle] pub fn panicimpl(x:&core::panic::PanicInfo)->!{debug!("Panic {}",x);loop{}}
+#[panic_implementation] #[no_mangle]  pub unsafe fn panicimpl(x:&core::panic::PanicInfo)->!{
+    let mut ebp=(&x as *const _ as usize)-8;
+    for i in 0..20{
+        let eip=*((ebp+4) as *const usize);
+        if eip==0{
+            break;
+        }
+        ebp=*(ebp as *const usize);
+        debug!("0x{:08X}",eip);
+        debug!("\n");
+    }
+    debug!("Kernel panic: {}\n",x);
+    loop{}
+}
 #[no_mangle] pub extern "C" fn _Unwind_Resume(){debug!("Unwind_Resume");loop{}} //TODO
 #[no_mangle]
 pub extern "C" fn kmain(loader_info: usize,cs: u32,be:u32) {
@@ -66,7 +81,8 @@ pub extern "C" fn kmain(loader_info: usize,cs: u32,be:u32) {
         }
     }
     print!("Done\n");
-    println!("Я думаю, ты слишком ленивый человек, чтобы создать нормальное ядро. Поэтому дальше запускаться не хочу, иди в жопу");
+    //println!("Я думаю, ты слишком ленивый человек, чтобы создать нормальное ядро. Поэтому дальше запускаться не хочу, иди в жопу");
+    println!("Eh_frame: 0x{:08X}",unsafe{&eh_frame} as *const _ as usize);
     panic!();
 }
 

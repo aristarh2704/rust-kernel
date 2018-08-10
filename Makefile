@@ -17,7 +17,7 @@ all: $(O) $(O)/kernel.elf
 $(O):
 	mkdir $(O)
 
-$(O)/kernel.elf: $(O)/entry.o
+$(O)/kernel.elf: $(O)/entry.o $(KERNEL_A)
 	objcopy -O elf32-i386 $(KERNEL_A)
 	i686-linux-ld --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/kernel.elf $(O)/entry.o $(KERNEL_A)
 	strip $(O)/kernel.elf
