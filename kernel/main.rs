@@ -1,6 +1,6 @@
 #![no_std]
 #![feature(lang_items)]
-#![feature(panic_implementation)]
+#![feature(panic_handler)]
 #[macro_use]
 extern crate console;
 extern crate rlibc;
@@ -17,7 +17,7 @@ extern{
     static eh_frame: usize;
 }
 #[lang = "eh_personality"] #[no_mangle] pub extern fn eh_personality() {debug!("eh_personality");loop{}}
-#[panic_implementation] #[no_mangle]  pub unsafe fn panicimpl(x:&core::panic::PanicInfo)->!{
+#[panic_handler] #[no_mangle]  pub unsafe fn panicimpl(x:&core::panic::PanicInfo)->!{
     let mut ebp=(&x as *const _ as usize)-8;
     for i in 0..20{
         let eip=*((ebp+4) as *const usize);
