@@ -3,6 +3,7 @@
 
 extern crate spin;
 extern crate multiboot;
+#[macro_use]
 extern crate devices;
 extern crate mem;
 use mem::Owned;
@@ -69,7 +70,8 @@ pub struct Tty{
 }
 impl Tty{
     pub fn write_byte(&mut self,byte: char) {
-        match byte {
+        debug!("{}",byte);
+	match byte {
             '\n'=>{
                 self.row+=1;
                 self.col=0;
