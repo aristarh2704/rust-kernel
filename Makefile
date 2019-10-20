@@ -18,9 +18,9 @@ $(O):
 	mkdir $(O)
 
 $(O)/kernel.elf: $(O)/entry.o $(KERNEL_A)
-	objcopy -O elf32-i386 $(KERNEL_A)
-	i686-linux-ld --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/kernel.elf $(O)/entry.o $(KERNEL_A)
-	strip $(O)/kernel.elf
+	llvm-objcopy -O elf32-i386 $(KERNEL_A)
+	ld.lld  --gc-sections -T $(SRC)/arch/$(ARCH)/link.ld -o $(O)/kernel.elf $(O)/entry.o $(KERNEL_A)
+	llvm-strip --strip-unneeded $(O)/kernel.elf
 
 $(O)/entry.o: $(SRC)/arch/x86/entry/entry.asm
 	nasm -f elf32 $(SRC)/arch/x86/entry/entry.asm -o $(O)/entry.o
