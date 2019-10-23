@@ -10,6 +10,8 @@ io={path="arch/x86/io"}
 mem={path="mem"}
 multiboot={path="multiboot/"}
 devices={path="devices"}
+multiboot2={path="arch/x86/rust-multiboot2"}
+x86="*"
 
 [lib]
 path="kernel/main.rs"

@@ -8,6 +8,7 @@ extern crate multiboot;
 extern crate rlibc;
 #[macro_use] // debug macros
 extern crate devices;
+extern crate x86;
 use console::*;
 use core::fmt;
 use core::fmt::Write;
@@ -59,7 +60,6 @@ pub extern "C" fn kmain(loader_info: usize, cs: u32, be: u32) {
         let rsdp = unsafe { &*(i.as_ptr() as *const RSDP) };
         if valid(rsdp) {
             println!("0x{:08X}", rsdp as *const _ as usize);
-            loop {}
             let rsdt = rsdp.rsdt;
             print_str(&rsdt.signature);
             println!("");
@@ -94,7 +94,7 @@ pub extern "C" fn kmain(loader_info: usize, cs: u32, be: u32) {
         }
     }
     print!("Done\n");
-    //println!("Я думаю, ты слишком ленивый человек, чтобы создать нормальное ядро. Поэтому дальше запускаться не хочу, иди в жопу");
+    println!("Я думаю, ты слишком ленивый человек, чтобы создать нормальное ядро. Поэтому дальше запускаться не хочу, иди в жопу");
     println!("Eh_frame: 0x{:08X}", unsafe { &eh_frame } as *const _
         as usize);
     panic!();
