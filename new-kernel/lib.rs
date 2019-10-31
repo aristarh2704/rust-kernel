@@ -2,6 +2,7 @@
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
 pub mod resource;
+#[macro_use]
 mod boot;
 #[lang = "eh_personality"]
 #[no_mangle]
@@ -25,5 +26,8 @@ pub unsafe fn panicimpl(x: &core::panic::PanicInfo) -> ! {
     debug!("Kernel panic: {}\n", x);
     loop {}
 }
-#[no_mangle]                                   pub extern "C" fn _Unwind_Resume() {               debug!("Unwind_Resume");                       loop {}
+#[no_mangle]
+pub extern "C" fn _Unwind_Resume() {
+    debug!("Unwind_Resume");
+    loop {}
 }

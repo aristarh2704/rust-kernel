@@ -1,6 +1,6 @@
-mod multiboot;
 #[macro_use]
 pub mod early_console;
+mod multiboot;
 #[no_mangle]
 pub unsafe extern "C" fn entry(x: multiboot::MultibootPointer,cs:usize,ce:usize,ss:usize,se:usize,ds:usize,de:usize){
 	let boot_info=multiboot::parse(x);

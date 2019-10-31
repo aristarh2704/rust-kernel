@@ -1,7 +1,6 @@
-#![feature(alloc,alloc_error_handler)]
-#![feature(alloc_error_handler)]
-extern crate linked_list_allocator;
+#![feature(alloc)]
 extern crate alloc;
+extern crate linked_list_allocator;
 pub mod init;
 pub use self::init::init;
 #[global_allocator]
@@ -10,3 +9,4 @@ pub static ALLOCATOR: linked_list_allocator::LockedHeap=linked_list_allocator::L
 fn oom(_layout: alloc::alloc::Layout) -> ! {
     panic!("seems oom occured");
 }
+

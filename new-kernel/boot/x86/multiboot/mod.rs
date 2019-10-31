@@ -99,13 +99,19 @@ pub struct RegionIterator<'a>{
 		impl<'a> Iterator for RegionIterator<'a>{
 			type Item=crate::resource::memory::init::MemoryRegion;
 			fn next(&mut self)->Option<Self::Item>{
+                loop{
 				let index=self.index+1;
 				if self.mmap.unwrap().len()<=index{return None;}
 				let fr=self.mmap.unwrap()[index];
-				Some(crate::resource::memory::init::MemoryRegion{
+                self.index+=1;
+                if(fr.flag==1){
+                    debug!("Add region: 0x{:08X}-0x{:08X}\n",fr.addr,fr.addr+fr.length);
+	    			return Some(crate::resource::memory::init::MemoryRegion{
 					base: fr.addr as usize,
 					size: fr.length as usize
-				})
+		    		});
+                }
+                }
 			}
 		}
 impl MultiBoot{
