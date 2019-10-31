@@ -1,5 +1,5 @@
 all: build/test.iso
-build/kernel.elf: build/target/release/libkernel.a
+build/kernel.elf: build/target/release/libkernel.a build/entry.o
 	ld.lld --gc-sections -T arch/x86/link.ld -o build/kernel.elf build/entry.o build/target/release/libkernel.a
 build/target/release/libkernel.a:
 	CARGO_TARGET_DIR=build cargo xbuild --target=arch/x86/target.json --release
