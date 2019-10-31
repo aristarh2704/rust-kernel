@@ -17,6 +17,7 @@ pub fn parse(x: MultibootPointer)->MultiBoot{
 	unsafe{
 		let mut base = Addr::new(x);
         let size = *base.read::<usize>();
+        debug!("Multiboot info: 0x{:08X}-0x{:08X}\n",base.x,base.x+size);
         base.read::<u32>();
 		let mut mb=MultiBoot{
 			mmap: None,
