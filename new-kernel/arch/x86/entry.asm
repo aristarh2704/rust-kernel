@@ -4,9 +4,9 @@
 section .text
 bits 32
 extern _entry         ;kmain определена во внешнем файле
-extern ce
-extern ds
-extern de
+extern code_e
+extern data_s
+extern data_e
 global start
 hd_start:
         ;multiboot spec
@@ -41,16 +41,16 @@ end_tag:dw 0
 header_end:
 start:
   mov esp, se ;указатель стека
-  push de
-  push ds
+  push data_e
+  push data_s
   push se
-  push 0
-  push ce
+  push stack_s
+  push code_e
   push hd_start
   push ebx
   call _entry
   hlt ;остановка процессора
 
 section .bss
-resb 8192 ;8KB на стек
+stack_s: resb 8192 ;8KB на стек
 se:
