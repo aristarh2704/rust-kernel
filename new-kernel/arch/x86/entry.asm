@@ -41,12 +41,12 @@ end_tag:dw 0
 header_end:
 start:
   mov esp, se ;указатель стека
-  push data_e
-  push data_s
-  push se
-  push stack_s
-  push code_e
-  push hd_start
+  push dword data_e
+  push dword data_s
+  push dword se
+  push dword stack_s
+  push dword code_e
+  push dword hd_start
   push ebx
   call _entry
   hlt ;остановка процессора

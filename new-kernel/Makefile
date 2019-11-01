@@ -6,7 +6,7 @@ build/kernel.elf: $(KERNEL_A) build/entry.o
 $(KERNEL_A):
 	CARGO_TARGET_DIR=build cargo xbuild --target=arch/x86/target.json --release
 build/entry.o: arch/x86/entry.asm
-	nasm -f elf32 arch/x86/entry.asm -o build/entry.o
+	yasm -p nasm -f elf32 arch/x86/entry.asm -o build/entry.o
 build/test.iso: build/kernel.elf
 	cp -r iso build/
 	cp build/kernel.elf build/iso/boot

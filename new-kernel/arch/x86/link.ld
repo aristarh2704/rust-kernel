@@ -16,6 +16,9 @@ SECTIONS
         KEEP(*(.eh_frame*))
    }
    .rodata : { *(.rodata*) }
+   .rel.text : {
+	KEEP(*(.rel.text*))
+   }
    .bss  : { 
 	*(.bss*) 
 	}
