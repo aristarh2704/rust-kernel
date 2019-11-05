@@ -31,6 +31,6 @@ pub fn init(){
 }
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)*) => ({use core::fmt::Write;crate::boot::x86::early_console::SerialPort{}.write_fmt(format_args!($($arg)*));});
+    ($($arg:tt)*) => ({use core::fmt::Write;let _res=crate::boot::x86::early_console::SerialPort{}.write_fmt(format_args!($($arg)*));});
 
 }
