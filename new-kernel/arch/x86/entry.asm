@@ -38,7 +38,6 @@ end_tag:dw 0
 header_end:
 start:
   mov esp, se ;указатель стека
-  push eax
   push ebx
   call _entry
   hlt ;остановка процессора
