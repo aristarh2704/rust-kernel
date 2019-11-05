@@ -1,26 +1,28 @@
 ENTRY(start)
-SECTIONS
- {
-   . = 0x100000;
-   .text : { *(.text*)  
-	code_e = .;
+SECTIONS{
+	. = 0x100000;
+	.text : {
+		*(.text*)  
 	}
-	. = ALIGN(4096);
-   .data : { 
-	data_s = .;
-	   *(.data*) 
-	data_e = .;
+   	.data : { 
+		. = ALIGN(4096);
+	   	*(.data*) 
 	}
-   .eh_frame : {
-        _eh_frame = .;
-        KEEP(*(.eh_frame*))
-   }
-   .rodata : { *(.rodata*) }
-   .rel.text : {
-	KEEP(*(.rel.text*))
-   }
-   .bss  : { 
-	*(.bss*) 
+   	.eh_frame : {
+		. = ALIGN(4096);
+
+        	_eh_frame = .;
+        	KEEP(*(.eh_frame*))
+   	}
+   	.rodata : {
+		. = ALIGN(4096);
+		*(.rodata*) }
+   	.rel.text : {
+		. = ALIGN(4096);
+		*(.rel.text*)
+   	}
+   	.bss  : { 
+		. = ALIGN(4096);
+		*(.bss*) 
 	}
-   kernel_end = .;
  }

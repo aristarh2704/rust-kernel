@@ -4,9 +4,6 @@
 section .text
 bits 32
 extern _entry         ;kmain определена во внешнем файле
-extern code_e
-extern data_s
-extern data_e
 global start
 hd_start:
         ;multiboot spec
@@ -41,12 +38,7 @@ end_tag:dw 0
 header_end:
 start:
   mov esp, se ;указатель стека
-  push dword data_e
-  push dword data_s
-  push dword se
-  push dword stack_s
-  push dword code_e
-  push dword hd_start
+  push eax
   push ebx
   call _entry
   hlt ;остановка процессора
