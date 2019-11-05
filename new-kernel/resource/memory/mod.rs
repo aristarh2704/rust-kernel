@@ -1,8 +1,8 @@
 #![feature(alloc)]
 extern crate alloc;
 extern crate linked_list_allocator;
-pub mod init;
-pub use self::init::init;
+mod init;
+pub use self::init::{init,MemoryRegion};
 #[global_allocator]
 pub static ALLOCATOR: linked_list_allocator::LockedHeap=linked_list_allocator::LockedHeap::empty();
 #[alloc_error_handler]
