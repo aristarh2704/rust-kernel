@@ -2,7 +2,26 @@ pub type MultibootPointer=usize;
 pub struct MultiBoot {
     pub mmap: Option<&'static [Frame]>,
     pub fb: FrameBuffer,
+    pub stable: Option<SecTable>
 }
+#[repr(packed)]
+pub struct SecTable{
+    pub index: u16, // ?
+    pub entries: &'static [SecEntry]
+}
+#[repr(packed)]
+pub struct SecEntry{
+  sh_name: u32,
+  sh_type:u32,
+  sh_flags:u32,
+  sh_addr:u32,
+  sh_offset:u32,
+  sh_size:u32,
+  sh_link:u32,
+  sh_info:u32,
+  sh_addralign:u32,
+  sh_entsize:u32
+} 
 #[repr(packed)]
 #[derive(Copy,Clone)]
 pub struct Frame {
@@ -17,7 +36,7 @@ pub fn parse(x: MultibootPointer)->MultiBoot{
 	unsafe{
 		let mut base = Addr::new(x);
         let size = *base.read::<usize>();
-        debug!("Multiboot info: 0x{:08X}-0x{:08X}\n",base.x,base.x+size);
+        debug!("Multiboot info: 0x{:08X}-0x{:08X}\n",base.x-4,base.x-4+size);
         base.read::<u32>();
 		let mut mb=MultiBoot{
 			mmap: None,
@@ -27,12 +46,14 @@ pub fn parse(x: MultibootPointer)->MultiBoot{
                 width: 80,
                 bpp: 2,
                 flag: 2,
-			}
+			},
+            stable:None
 		};
         while base.readed < size {
             let last = base.readed;
             let flag = *base.read::<u32>();
             let sub_size = *base.read::<u32>();
+            debug!("Flag: {}\n",flag);
             match flag {
 				8 => {
                     let addr = *base.read::<u32>();
@@ -55,6 +76,14 @@ pub fn parse(x: MultibootPointer)->MultiBoot{
                     let count = ((sub_size - 16) / 24) as usize;
                     mb.mmap =
                         Some(unsafe { core::slice::from_raw_parts_mut(addr as *mut Frame, count) });
+                }
+                9 => {
+                    debug!("We here\n");
+                    //let num=*base.read::<u16>();
+                    //let ensize=*base.read::<u16>();
+                    //let shndx=*base.read::<u16>();
+                    debug!("We here\n");
+                    //debug!("Count: {}, size: {}, shndx: {}, struct_size: {}\n",num,ensize,shndx,core::mem::size_of::<SecEntry>());
                 }
 				_ => {}
 			}
@@ -94,11 +123,10 @@ impl Addr {
 
 pub struct RegionIterator<'a>{
 	index: usize,
-	excludes: [(usize,usize);3],
 	mmap: &'a Option<&'static [Frame]>
 }
 		impl<'a> Iterator for RegionIterator<'a>{
-			type Item=crate::resource::memory::init::MemoryRegion;
+			type Item=crate::resource::paging::MemoryRegion;
 			fn next(&mut self)->Option<Self::Item>{
                 loop{
 				let index=self.index+1;
@@ -107,7 +135,7 @@ pub struct RegionIterator<'a>{
                 self.index+=1;
                 if(fr.flag==1){
                     debug!("Add region: 0x{:08X}-0x{:08X}\n",fr.addr,fr.addr+fr.length);
-	    			return Some(crate::resource::memory::init::MemoryRegion{
+	    			return Some(crate::resource::paging::MemoryRegion{
 					base: fr.addr as usize,
 					size: fr.length as usize
 		    		});
@@ -116,11 +144,10 @@ pub struct RegionIterator<'a>{
 			}
 		}
 impl MultiBoot{
-	pub fn regions<'a>(& self,cs:usize,ce:usize,ss:usize,se:usize,ds:usize,de:usize)->RegionIterator{
+	pub fn regions<'a>(& self)->RegionIterator{
 		RegionIterator{
 			index:0,
 			mmap: &self.mmap,
-			excludes: [(cs,ce),(ss,se),(ds,de)]
 		}
 	}
 }
