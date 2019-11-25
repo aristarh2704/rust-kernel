@@ -1,7 +1,7 @@
 extern crate x86;
 use self::x86::io::outb;
 pub struct SerialPort {}
-const SER: SerialPort=SerialPort{};
+const SER: SerialPort = SerialPort {};
 impl SerialPort {
     pub fn init() {
         unsafe {
@@ -26,8 +26,8 @@ impl core::fmt::Write for SerialPort {
         Ok(())
     }
 }
-pub fn init(){
-	SerialPort::init();
+pub fn init() {
+    SerialPort::init();
 }
 #[macro_export]
 macro_rules! debug {

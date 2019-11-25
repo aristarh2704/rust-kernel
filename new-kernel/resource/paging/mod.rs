@@ -1,2 +1,2 @@
 mod init;
-pub use self::init::{init,MemoryRegion};
+pub use self::init::{init, MemoryRegion};
