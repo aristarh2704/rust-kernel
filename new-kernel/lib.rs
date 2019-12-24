@@ -1,7 +1,8 @@
 #![no_std]
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
-pub mod resource;
+mod arch;
+mod resource;
 #[macro_use]
 mod boot;
 #[lang = "eh_personality"]

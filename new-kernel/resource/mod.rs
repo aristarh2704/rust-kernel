@@ -1,2 +1,2 @@
+// Base kernel mechanics
 pub mod memory;
-pub mod paging;
