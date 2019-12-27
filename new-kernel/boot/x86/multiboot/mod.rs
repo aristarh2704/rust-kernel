@@ -143,7 +143,7 @@ pub struct RegionIterator<'a> {
     mmap: &'a Option<&'static [Frame]>,
 }
 impl<'a> Iterator for RegionIterator<'a> {
-    type Item = crate::resource::paging::MemoryRegion;
+    type Item = crate::resource::memory::MemoryRegion;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index + 1;
@@ -158,7 +158,7 @@ impl<'a> Iterator for RegionIterator<'a> {
                     fr.addr,
                     fr.addr + fr.length
                 );
-                return Some(crate::resource::paging::MemoryRegion {
+                return Some(crate::resource::memory::MemoryRegion {
                     base: fr.addr as usize,
                     size: fr.length as usize,
                 });
