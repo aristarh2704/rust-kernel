@@ -1,24 +1,15 @@
-/*
- * This module works with memory, it's obvious.
- * Components: allocator, paging.
- * API: address space alloc (raw pointer), phys alloc (PhysReg), set the special descriptor, work
- * with mmaps, set page attributes (cow, etc), callbacks (swapper).
- * Allocator return Frame struct, which may be converted to any type.
- * Address space: array of accessible regions (virtual addresses).
- * If allocator can't alloc memory, it tries increase address space.
- * Newly created region after this must be mapped to phys mem to be accessible.
- * UsedMem: consist all ram pages descriptors (physical addresses), number of uses, and pointers to address space descriptors.
- * PhysMem: consist list of free phys regions. Needed for devices.
- */
-
- // Contains data, which cannot be swapped and moved.
-struct PhysContainer{} 
-
-// Each address space must contain one descriptor for all reachable memory
-struct AddressSpace{
-    as: paging::AddressSpace,
-    free: LinkedList<VirtualRegion>
+struct Frame<T>{
+    size: usize, // size of this peace of memory
+    content: T // can contain pointer to next Frame. It's type defined by allocator.
 }
+// TODO: Frame can be cutted to two parts or united from two contiguous Frames.
+// Frame can be converted to any type, before it must be zeroed.
+
+struct Page{
+    // attributes
+}
+pub fn pages_from_bootinfo()->(){} // Return page iterator.
+pub fn mmap(Page,address,attrs,page_allocator);
 #![feature(alloc)]
 extern crate alloc;
 extern crate linked_list_allocator;
