@@ -1,16 +1,45 @@
-struct Frame<T>{
-    size: usize, // size of this peace of memory
-    content: T // can contain pointer to next Frame. It's type defined by allocator.
-}
-// TODO: Frame can be cutted to two parts or united from two contiguous Frames.
-// Frame can be converted to any type, before it must be zeroed.
+// Real memory descriptor
+pub struct RMDescriptor{}
 
+// Virtual memory descriptor
+pub struct VMDescriptor{
+    size: usize,
+    addr: usize
+}
+impl VMDescriptor{
+    pub fn cut(self,first:usize)->Result<(Self,Self),Self>{
+        if self.size>first && first!=0{
+            Ok((
+                VMDescriptor{size:first,addr:self.addr},
+                VMDescriptor{size:self.size-first,addr:self.addr+first}))
+        }else{
+            Err(self)
+        }
+    }
+    pub fn combine(self,next:Self)->Result<Self,(Self,Self)>{
+        if self.size+self.addr==next.addr{
+            Ok(VMDescriptor{size:self.size+next.size,addr:self.addr})
+        }else{
+            Err((self,next))
+        }
+    }
+    pub fn convert<T>(self)->Result<Owned<T>,Self>{ // TODO: memory uninitialized
+        if core::mem::size_of::<T>()==self.size{
+            Ok(Owned{data:self.addr as *mut T})
+        }else{
+            Err(self)
+        }
+    }
+}
+struct Owned<T>{
+    data: *mut T
+}
 struct Page{
     // attributes
 }
 pub fn pages_from_bootinfo()->(){} // Return page iterator.
-pub fn mmap(Page,address,attrs,page_allocator);
-#![feature(alloc)]
+// pub fn mmap(Page,address,attrs,page_allocator){};
+//#![feature(alloc)]
 extern crate alloc;
 extern crate linked_list_allocator;
 mod init;
