@@ -1,5 +1,63 @@
+use core::ptr::NonNull;
 // Real memory descriptor
 pub struct RMDescriptor{}
+
+struct Frame{
+    size: usize,
+    next: Option<FrameOwner>
+}
+impl Frame{
+    pub fn borrow_next(&mut self)->Option<&mut Frame>{
+        match self.next{
+            Some(ref mut owner)=>Some(owner.frame),
+            None=>None
+        }
+    }
+    // May panics, if self contains pointer to next
+    pub fn set_next(&mut self,next:FrameOwner){
+        match self.next{
+            Some(_)=>panic!("Trying set next on Frame"),
+            None=>{},
+        };
+        self.next=Some(next);
+    }
+    pub fn get_next(&mut self)->Option<FrameOwner>{
+        self.next.take()
+    }
+}
+impl Drop for Frame{
+    fn drop(&mut self){
+        panic!("Frame cannot be automaticaly dropped");
+    }
+}
+struct FrameOwner{
+    frame: &'static mut Frame
+}
+impl<'a> FrameOwner{
+    pub fn to_descriptor(self)->(VMDescriptor,Option<FrameOwner>){
+        let next=self.frame.next.take();
+        let addr=self.frame as *mut Frame as usize;
+        let size=self.frame.size;
+        core::mem::forget(self);
+        (VMDescriptor{size:size,addr:addr},next)
+    }
+    pub fn try_from_descriptor(data:VMDescriptor)->Result<FrameOwner,VMDescriptor>{
+        if data.size>=8{
+            let frame_ptr=unsafe{&mut *(data.addr as *mut Frame)};
+            frame_ptr.size=data.size;
+            frame_ptr.next=None;
+            core::mem::forget(data);
+            Ok(FrameOwner{frame:frame_ptr})
+        }else{
+            Err(data)
+        }
+    }
+}
+impl Drop for FrameOwner{
+    fn drop(&mut self){
+        panic!("FrameOwner cannot be automaticaly dropped");
+    }
+}
 
 // Virtual memory descriptor
 pub struct VMDescriptor{
@@ -9,9 +67,11 @@ pub struct VMDescriptor{
 impl VMDescriptor{
     pub fn cut(self,first:usize)->Result<(Self,Self),Self>{
         if self.size>first && first!=0{
-            Ok((
+            let result=Ok((
                 VMDescriptor{size:first,addr:self.addr},
-                VMDescriptor{size:self.size-first,addr:self.addr+first}))
+                VMDescriptor{size:self.size-first,addr:self.addr+first}));
+            core::mem::forget(self);
+            return result;
         }else{
             Err(self)
         }
@@ -25,14 +85,20 @@ impl VMDescriptor{
     }
     pub fn convert<T>(self)->Result<Owned<T>,Self>{ // TODO: memory uninitialized
         if core::mem::size_of::<T>()==self.size{
-            Ok(Owned{data:self.addr as *mut T})
+            Ok(Owned{data:unsafe{NonNull::new_unchecked(self.addr as *mut T)}})
         }else{
             Err(self)
         }
     }
 }
+impl Drop for VMDescriptor{
+    fn drop(&mut self){
+        panic!("VMDescriptor cannot be automaticaly dropped");
+    }
+}
+
 struct Owned<T>{
-    data: *mut T
+    data: NonNull<T>
 }
 struct Page{
     // attributes
