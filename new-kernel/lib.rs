@@ -1,6 +1,7 @@
 #![no_std]
 #![feature(lang_items)]
 #![feature(alloc_error_handler)]
+extern crate alloc;
 mod arch;
 mod resource;
 #[macro_use]
