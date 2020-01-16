@@ -114,6 +114,15 @@ impl Drop for VMDescriptor{
     }
 }
 
+trait KernelAllocator{
+    fn alloc(size: usize,align:usize)->Result<VMDescriptor,()>; // If VMDescriptor is not suitable, it returns to allocator. I think this situation will not happen
+    fn dealloc(data: VMDescriptor);
+    fn min_align()->usize; // Called at once, at setting allocator
+    fn min_size()->usize; // Above
+    fn on_drop_frame(Box<Frame>); // If Frame dropped, it's returns to allocator, because dropping is a bad situation
+    fn sort_internal(){return;} // Used for sorting internal structures, if allocator does not doing it automatically
+}
+
 struct Page{
     // attributes
 }
@@ -141,7 +150,7 @@ enum State{
 }*/
 #[global_allocator]
 pub static ALLOCATOR: linked_list_allocator::LockedHeap =
-    linked_list_allocator::LockedHeap::empty();
+    linked_list_allocator::LockedHeap::empty(); // Will be deleted
 /*
 pub struct AllocatorProxy{}
 impl core::alloc::GlobalAlloc for AllocatorProxy{
