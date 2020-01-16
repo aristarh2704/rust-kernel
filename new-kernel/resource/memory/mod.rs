@@ -1,4 +1,5 @@
 use core::ptr::NonNull;
+use core::mem::forget;
 // Real memory descriptor
 pub struct RMDescriptor{}
 
@@ -6,31 +7,36 @@ struct Frame{
     size: usize,
     next: Option<FrameOwner>
 }
-impl Frame{
-    pub fn borrow_next(&mut self)->Option<&mut Frame>{
-        match self.next{
-            Some(ref mut owner)=>Some(owner.frame),
-            None=>None
-        }
-    }
-    // May panics, if self contains pointer to next
-    pub fn set_next(&mut self,next:FrameOwner){
-        match self.next{
-            Some(_)=>panic!("Trying set next on Frame"),
-            None=>{},
-        };
-        self.next=Some(next);
-    }
-    pub fn get_next(&mut self)->Option<FrameOwner>{
-        self.next.take()
-    }
-}
 impl Drop for Frame{
     fn drop(&mut self){
         panic!("Frame cannot be automaticaly dropped");
     }
 }
-struct FrameOwner{
+
+// We can ensure that pointed Frame have not next
+struct CreatedFrame{
+    frame: &'static mut Frame
+}
+impl CreatedFrame{
+    pub fn to_frameowner(self)->FrameOwner{
+        let frame=unsafe{&mut *(self.frame as *mut Frame)};
+        forget(self);
+        FrameOwner{frame:frame}
+    }
+    pub fn set_next(self,next:FrameOwner)->FrameOwner{
+        self.frame.next=Some(next);
+        let frame=unsafe{&mut *(self.frame as *mut Frame)};
+        forget(self);
+        FrameOwner{frame:frame}
+    }
+}
+impl Drop for CreatedFrame{
+    fn drop(&mut self){
+        // TODO
+    }
+}
+
+pub struct FrameOwner{
     frame: &'static mut Frame
 }
 impl<'a> FrameOwner{
@@ -38,19 +44,20 @@ impl<'a> FrameOwner{
         let next=self.frame.next.take();
         let addr=self.frame as *mut Frame as usize;
         let size=self.frame.size;
-        core::mem::forget(self);
+        forget(self);
         (VMDescriptor{size:size,addr:addr},next)
     }
-    pub fn try_from_descriptor(data:VMDescriptor)->Result<FrameOwner,VMDescriptor>{
-        if data.size>=8{
-            let frame_ptr=unsafe{&mut *(data.addr as *mut Frame)};
-            frame_ptr.size=data.size;
-            frame_ptr.next=None;
-            core::mem::forget(data);
-            Ok(FrameOwner{frame:frame_ptr})
-        }else{
-            Err(data)
-        }
+    pub fn get_next(&mut self)->Option<FrameOwner>{
+        self.frame.next.take()
+    }
+    pub fn borrow_next(&mut self)->&mut Option<FrameOwner>{
+        &mut self.frame.next
+    }
+    pub fn size(&self)->usize{
+        self.frame.size
+    }
+    pub fn addr(&self)->usize{
+        &*self.frame as *const Frame as usize
     }
 }
 impl Drop for FrameOwner{
@@ -70,15 +77,18 @@ impl VMDescriptor{
             let result=Ok((
                 VMDescriptor{size:first,addr:self.addr},
                 VMDescriptor{size:self.size-first,addr:self.addr+first}));
-            core::mem::forget(self);
-            return result;
+            forget(self);
+            result
         }else{
             Err(self)
         }
     }
     pub fn combine(self,next:Self)->Result<Self,(Self,Self)>{
         if self.size+self.addr==next.addr{
-            Ok(VMDescriptor{size:self.size+next.size,addr:self.addr})
+            let result=Ok(VMDescriptor{size:self.size+next.size,addr:self.addr});
+            forget(self);
+            forget(next);
+            result
         }else{
             Err((self,next))
         }
@@ -90,6 +100,9 @@ impl VMDescriptor{
             Err(self)
         }
     }
+    pub fn try_to_frameowner(self){
+        
+    }
 }
 impl Drop for VMDescriptor{
     fn drop(&mut self){
@@ -97,7 +110,7 @@ impl Drop for VMDescriptor{
     }
 }
 
-struct Owned<T>{
+pub struct Owned<T>{
     data: NonNull<T>
 }
 struct Page{
@@ -129,6 +142,13 @@ enum State{
 #[global_allocator]
 pub static ALLOCATOR: linked_list_allocator::LockedHeap =
     linked_list_allocator::LockedHeap::empty();
+/*
+pub struct AllocatorProxy{}
+impl core::alloc::GlobalAlloc for AllocatorProxy{
+}
+#[global_allocator]
+pub static ALLOCATOR: AllocatorProxy=AllocatorProxy{};
+*/
 #[alloc_error_handler]
 fn oom(_layout: alloc::alloc::Layout) -> ! {
     panic!("seems oom occured");
