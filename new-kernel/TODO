@@ -1,0 +1,2 @@
+Change attributes for core items. For example, core::mem::forget will be marked as unsafe
+
