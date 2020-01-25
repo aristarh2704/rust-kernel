@@ -46,7 +46,7 @@ struct Continuous<T>{
 impl<T> Continuous<T>{
     fn reduce(&mut self,new_length:usize)->Result<Continuous<T>,()>{
         if new_length!=0 && new_length<self.length{
-            let result=Ok(Continuous{data:self.data+new_length,length:gself.length-new_length,_phantom:PhantomData});
+            let result=Ok(Continuous{data:self.data+new_length,length:self.length-new_length,_phantom:PhantomData});
             self.length-=new_length;
             return result;
         }else{
