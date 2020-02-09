@@ -1,2 +1,7 @@
 Change attributes for core items. For example, core::mem::forget will be marked as unsafe
+Switch to micro-service architecture:
+base modules: memory blocks for kernel purposes, raw pager, kernelVMAPager (uses raw pager), IOPort service, FS service, proccess service
+strategies modules: allocator, pager allocator, sheduler, drivers
+api module
+Each service has API and it's users. For example, PhysController controlls list of physical pages, and list of it's users. Page struct is one of these users of controller.
 
