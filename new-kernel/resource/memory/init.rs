@@ -1,11 +1,12 @@
 use super::linked_list_allocator::LockedHeap;
 use core::alloc::GlobalAlloc;
 use resource::memory::ALLOCATOR;
-pub struct MemoryRegion {
+pub struct BootRegion {
     pub base: usize,
     pub size: usize,
+    pub type: BootRegionType
 }
-pub unsafe fn init<T: Iterator<Item = MemoryRegion>>(regions: T) {
+pub unsafe fn init<T: Iterator<Item = BootRegion>>(regions: T) {
     for reg in regions {
         ALLOCATOR.dealloc(
             reg.base as *mut u8,

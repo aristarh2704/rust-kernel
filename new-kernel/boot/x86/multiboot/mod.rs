@@ -137,31 +137,41 @@ impl Addr {
         self.readed += x;
     }
 }
-
+use crate::resource::memory::MemoryRegion;
 pub struct RegionIterator<'a> {
     index: usize,
     mmap: &'a Option<&'static [Frame]>,
 }
+#[no_mangle]
+extern{
+    pub static kernel_end:usize;
+}
 impl<'a> Iterator for RegionIterator<'a> {
-    type Item = crate::resource::memory::MemoryRegion;
+    type Item = MemoryRegion;
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let index = self.index + 1;
             if self.mmap.unwrap().len() <= index {
                 return None;
             }
-            let fr = self.mmap.unwrap()[index];
+            let mut fr = self.mmap.unwrap()[index];
             self.index += 1;
-            if (fr.flag == 1) {
+            if fr.flag == 1 {
+                let kern_end:usize = unsafe{&kernel_end as *const usize as usize};
+                if fr.addr==0x100000{
+                    fr.addr==kern_end as u32;
+                    fr.length==fr.length-kern_end as u32 +0x100000;
+                }
                 debug!(
                     "Add region: 0x{:08X}-0x{:08X}\n",
                     fr.addr,
                     fr.addr + fr.length
                 );
-                return Some(crate::resource::memory::MemoryRegion {
+                return Some(MemoryRegion {
                     base: fr.addr as usize,
                     size: fr.length as usize,
                 });
+                
             }
         }
     }

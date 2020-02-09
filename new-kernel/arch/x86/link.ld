@@ -25,4 +25,5 @@ SECTIONS{
 		. = ALIGN(4096);
 		*(.bss*) 
 	}
+	_kernel_end = .;
  }
